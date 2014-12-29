@@ -1,0 +1,1450 @@
+libname data "F:\Competition\PBoberg17632.00-Hockey\Analysis\NHL Game Results\CWA\data" access=readonly;
+libname use "F:\Competition\PBoberg17632.00-Hockey\Analysis\NHL Game Results\CWA\use";
+libname scg "F:\Competition\PBoberg17632.00-Hockey\Analysis\NHL Game Results\SCG\Output" access=readonly;
+
+***PROGRAM: HOCKEY REGRESSION DATASET
+***PROGRAMMER: COLE ANDERSON
+***DATE: DECEMBER 9, 2014
+***VERSION 3;
+
+****READIN TV DATA****;
+****SAVED AS CSV FROM Historical Ratings (0708-1314).xls****;
+****FOUND IN: F:\Competition\PBoberg17632.00-Hockey\Analysis\NHL Game Results\CWA\raw csv\;
+
+%let dbms=excel; ****CHANGE TO EXCEL IF ON VM***;
+
+%macro tv(yr);
+
+data tv_&yr. (compress=yes);
+ infile "F:\Competition\PBoberg17632.00-Hockey\Analysis\NHL Game Results\CWA\raw csv\&yr.Reg Local.csv"
+dlm=','	missover dsd lrecl=32000 firstobs=5;
+informat GM  $64.; format GM  $64.;
+informat DAY  $3.; format DAY  $4.;
+informat DATE  mmddyy10.; format DATE  mmddyy10.;
+informat visitor  $24.; format visitor  $24.;
+informat HOME  $24.; format HOME  $24.;
+informat TIME  $24.; format TIME  $24.;
+informat visitor_tv  $50.; format visitor_tv  $50.;
+informat visitor_duration  $40.; format visitor_duration  $40.;
+informat visitor_rating  $40.; format visitor_rating  $40.;
+informat visitor_share  $40.; format visitor_share  $40.;
+informat visitor_000s  $40.; format visitor_000s  $40.;
+informat visitor_p2plus  $40.; format visitor_p2plus  $40.;
+informat home_tv  $50.; format home_tv  $50.;
+informat home_duration  $50.; format home_duration  $50.;
+informat home_rating  $40.; format home_rating  $40.;
+informat home_share  $40.; format home_share  $40.;
+informat home_000s  $40.; format home_000s  $40.;
+informat home_p2plus  $40.; format home_p2plus  $40.;
+informat national_tv  $50.; format national_tv  $50.;
+informat nat_visitor_duration  $50.; format nat_visitor_duration  $50.;
+informat nat_visitor_rating  $40.; format nat_visitor_rating  $40.;
+informat nat_visitor_share  $40.; format nat_visitor_share  $40.;
+informat nat_visitor_000s  $40.; format nat_visitor_000s  $40.;
+informat nat_visitor_p2plus  $40.; format nat_visitor_p2plus  $40.;
+informat nat_home_duration  $50.; format nat_home_duration  $50.;
+informat nat_home_rating  $40.; format nat_home_rating  $40.;
+informat nat_home_share  $40.; format nat_home_share  $40.;
+informat nat_home_000s  $40.; format nat_home_000s  $40.;
+informat nat_home_p2plus  $40.; format nat_home_p2plus  $40.;
+input GM $DAY $	DATE	TIME $	visitor $	HOME $	visitor_tv $ visitor_duration	visitor_rating	visitor_share	visitor_000s	visitor_p2plus	home_tv	$ home_duration	home_rating	home_share	home_000s	home_p2plus	national_tv $	nat_visitor_duration	nat_visitor_rating	nat_visitor_share	nat_visitor_000s	nat_visitor_p2plus	nat_home_duration	nat_home_rating	nat_home_share	nat_home_000s	nat_home_p2plus;
+if visitor in (" " "Visitor") then delete;
+home_national_tv=strip(national_tv);
+visitor_national_tv=strip(national_tv);
+
+run;
+
+%mend tv;
+%tv(0910);
+%tv(1011);
+%tv(1112);
+%tv(1213);
+%tv(1314);
+
+****READIN TV DATA DIFFERENT FORMATS***;
+****SAVED AS CSV FROM Historical Ratings (0708-1314).xls****;
+****FOUND IN: F:\Competition\PBoberg17632.00-Hockey\Analysis\NHL Game Results\CWA\raw csv\;
+
+data tv_0809 (compress=yes drop=national_tv:);
+ infile "F:\Competition\PBoberg17632.00-Hockey\Analysis\NHL Game Results\CWA\raw csv\0809Reg Local.csv"
+dlm=','	missover dsd lrecl=32000 firstobs=5;
+informat GM  $64.; format GM  $64.;
+informat DAY  $3.; format DAY  $4.;
+informat DATE  mmddyy10.; format DATE  mmddyy10.;
+informat visitor  $24.; format visitor  $24.;
+informat HOME  $24.; format HOME  $24.;
+informat TIME  $24.; format TIME  $24.;
+informat visitor_tv  $32.; format visitor_tv  $32.;
+informat visitor_duration  $50.; format visitor_duration  $50.;
+informat visitor_rating  $40.; format visitor_rating  $40.;
+informat visitor_share  $40.; format visitor_share  $40.;
+informat visitor_000s  $40.; format visitor_000s  $40.;
+informat visitor_p2plus  $40.; format visitor_p2plus  $40.;
+informat home_tv  $32.; format home_tv  $32.;
+informat home_duration  $50.; format home_duration  $50.;
+informat home_rating  $40.; format home_rating  $40.;
+informat home_share  $40.; format home_share  $40.;
+informat home_000s  $40.; format home_000s  $40.;
+informat home_p2plus  $40.; format home_p2plus  $40.;
+informat national_tv  $24.; format national_tv  $24.;
+informat national_tv1  $24.; format national_tv1  $24.;
+informat nat_visitor_duration  $50.; format nat_visitor_duration  $50.;
+informat nat_visitor_rating  $40.; format nat_visitor_rating  $40.;
+informat nat_visitor_share  $40.; format nat_visitor_share  $40.;
+informat nat_visitor_000s  $40.; format nat_visitor_000s  $40.;
+informat nat_visitor_p2plus  $40.; format nat_visitor_p2plus  $40.;
+informat nat_home_duration  $50.; format nat_home_duration  $50.;
+informat nat_home_rating  $40.; format nat_home_rating  $40.;
+informat nat_home_share  $40.; format nat_home_share  $40.;
+informat nat_home_000s  $40.; format nat_home_000s  $40.;
+informat nat_home_p2plus  $40.; format nat_home_p2plus  $40.;
+input GM	DAY $	DATE	TIME	visitor $	HOME $	visitor_tv $ visitor_duration	visitor_rating	visitor_share	visitor_000s	visitor_p2plus	home_tv	$ home_duration	home_rating	home_share	home_000s	home_p2plus	national_tv $ national_tv1 $	nat_visitor_duration	nat_visitor_rating	nat_visitor_share	nat_visitor_000s	nat_visitor_p2plus	nat_home_duration	nat_home_rating	nat_home_share	nat_home_000s	nat_home_p2plus;
+if visitor in (" " "Visitor") then delete;
+ if national_tv1 ne " " then home_national_tv=strip(national_tv)||", "||strip(national_tv1); else home_national_tv=strip(national_tv);
+ if national_tv1 ne " " then visitor_national_tv=strip(national_tv)||", "||strip(national_tv1); else visitor_national_tv=strip(national_tv);
+run;
+
+data tv_0708 (compress=yes drop=national_tv:);
+ infile "F:\Competition\PBoberg17632.00-Hockey\Analysis\NHL Game Results\CWA\raw csv\0708Reg Local.csv"
+dlm=','	missover dsd lrecl=32000 firstobs=5;
+informat GM  $64.; format GM  $64.;
+informat DAY  $3.; format DAY  $4.;
+informat DATE  mmddyy10.; format DATE  mmddyy10.;
+informat visitor  $24.; format visitor  $24.;
+informat HOME  $24.; format HOME  $24.;
+informat TIME  $24.; format TIME  $24.;
+informat national_tv  $24.; format national_tv  $24.;
+informat national_tv1  $24.; format national_tv1  $24.;
+informat visitor_tv  $32.; format visitor_tv  $32.;
+informat visitor_rating  $40.; format visitor_rating  $40.;
+informat visitor_share  $40.; format visitor_share  $40.;
+informat visitor_000s  $40.; format visitor_000s  $40.;
+informat home_tv  $32.; format home_tv  $32.;
+informat home_rating  $40.; format home_rating  $40.;
+informat home_share  $40.; format home_share  $40.;
+informat home_000s  $40.; format home_000s  $40.;
+informat nat_visitor_rating  $40.; format nat_visitor_rating  $40.;
+informat nat_visitor_share  $40.; format nat_visitor_share  $40.;
+informat nat_visitor_000s  $40.; format nat_visitor_000s  $40.;
+informat nat_home_rating  $40.; format nat_home_rating  $40.;
+informat nat_home_share  $40.; format nat_home_share  $40.;
+informat nat_home_000s  $40.; format nat_home_000s  $40.;
+input GM	DAY $	DATE	visitor $	HOME $	TIME national_tv $ national_tv1 $ visitor_tv $ visitor_rating	visitor_share	visitor_000s	
+home_tv	$ home_rating	home_share	home_000s	nat_visitor_rating	nat_visitor_share nat_visitor_000s nat_home_rating	nat_home_share	nat_home_000s;
+if visitor in (" " "Visitor") then delete;
+ if national_tv1 ne " " then home_national_tv=strip(national_tv)||", "||strip(national_tv1); else home_national_tv=strip(national_tv);
+ if national_tv1 ne " " then visitor_national_tv=strip(national_tv)||", "||strip(national_tv1); else visitor_national_tv=strip(national_tv);
+run;
+
+***********READIN GAME DATA****;
+****FOUND IN: F:\Competition\PBoberg17632.00-Hockey\Analysis\NHL Game Results\CWA\raw csv\;
+****PLAYOFFS ARE NOT NEEDED - NO TV DATA TO MERGE ON***;
+
+%macro gs(nm,ses);
+
+data &nm.;
+ infile "F:\Competition\PBoberg17632.00-Hockey\Analysis\NHL Game Results\CWA\raw csv\&nm..csv"
+dlm=','	missover dsd lrecl=32000 firstobs=5;
+informat season_ending $10.; format season_ending $10.;
+informat Date  $24.; format Date  $24.;
+informat visitor  $24.; format visitor  $24.;
+informat visitor_score  best12.; format visitor_score  best12.;
+informat Home  $24.; format Home  $24.;
+informat home_score  best12.; format home_score  best12.;
+informat ot_so  $4.; format ot_so  $4.;
+informat w_Goalie  $32.; format w_Goalie  $32.;
+informat wt_goal  $32.; format wt_goal  $32.;
+informat visitor_Shots  best12.; format visitor_Shots  best12.;
+informat visitor_PPGF  best12.; format visitor_PPGF  best12.;
+informat visitor_PPOpp  best12.; format visitor_PPOpp  best12.;
+informat visitor_PIM  best12.; format visitor_PIM  best12.;
+informat Home_Shots  best12.; format Home_Shots  best12.;
+informat home_PPGF  best12.; format home_PPGF  best12.;
+informat home_PPOpp  best12.; format home_PPOpp  best12.;
+informat home_PIM  best12.; format home_PIM  best12.;
+informat attendance  comma12.; format attendance  comma12.;
+input Date $	visitor $	visitor_score	Home $	home_score	ot_so $	w_Goalie $	wt_goal $	visitor_Shots	visitor_PPGF	visitor_PPOpp	visitor_PIM	Home_Shots	home_PPGF	home_PPOpp	home_PIM	attendance;
+if visitor in (" " "Visitor") then delete;
+season_ending="&ses.";
+	run;
+
+%mend gs;
+%gs(reg_season_2006,2006);
+%gs(reg_season_2007,2007);
+%gs(reg_season_2008,2008);
+%gs(reg_season_2009,2009);
+%gs(reg_season_2010,2010);
+%gs(reg_season_2011,2011);
+%gs(reg_season_2012,2012);
+%gs(reg_season_2013,2013);
+%gs(reg_season_2014,2014);
+
+
+*%gs(post_season_2007,po2007);
+*%gs(post_season_2008,po2008);
+*%gs(post_season_2009,po2009);
+*%gs(post_season_2010,po2010);
+*%gs(post_season_2011,po2011);
+*%gs(post_season_2012,po2012);
+*%gs(post_season_2013,po2013);
+*%gs(post_season_2014,po2014);
+
+****COLLECT NHL GAME DATA***;
+****DATASTEP WILL CLEAN DATE VARIABLE & STANDARDZIE TEAM NAMES***;
+
+data use.gm_results (drop=date);
+	format season_ending clean_date;
+	format clean_date date10.;
+	set reg_season_2006 reg_season_2007 reg_season_2008 reg_season_2009 reg_season_2010 reg_season_2011 reg_season_2012 reg_season_2013 reg_season_2014
+	;*	post_season_2007 post_season_2008 post_season_2009 post_season_2010 post_season_2011 post_season_2012 post_season_2013 post_season_2014;
+	clean_date=input(strip(substr(date,5,2))||strip(upcase(substr(date,1,3)))||strip(2000+substr(date,9,2)),date10.);
+	visitor=upcase(visitor);
+	home=upcase(strip(home));
+
+if substr(season_ending,1,2)="po" then do;
+	playoffs=1;
+	season_ending=substr(season_ending,3,4);
+	end;
+	else playoffs=0;
+
+****STANDARDIZE TEAM NAMES ACROSS YEARS OF DATA***;
+
+%macro both(both);
+
+		if &both.="N.Y. RANGERS" then &both.="NYR";
+		if &both.="ST. LOUIS" then &both.="STL";
+		if &both.="N.Y. ISLANDERS" then &both.="NYI";
+		if &both.='ANAHEIM' then &both.='ANA';
+		if &both.='BOSTON' then &both.='BOS';
+		if &both.='BUFFALO' then &both.='BUF';
+		if &both.='CALGARY' then &both.='CGY';
+		if &both.='CAROLINA' then &both.='CAR';
+		if &both.='COLUMBUS' then &both.='CBJ';
+		if &both.='CHICAGO' then &both.='CHI';
+		if &both.='COLORADO' then &both.='COL';
+		if &both.='DALLAS' then &both.='DAL';
+		if &both.='DETROIT' then &both.='DET';
+		if &both.='EDMONTON' then &both.='EDM';
+		if &both.='FLORIDA' then &both.='FLA';
+		if &both.='LOS ANGELES' then &both.='LAK';
+		if &both.='MINNESOTA' then &both.='MIN';
+		if &both.='MONTREAL' then &both.='MTL';
+		if &both.='NASHVILLE' then &both.='NSH';
+		if &both.='NEW JERSEY' then &both.='NJD';
+		if &both.='NY ISLANDERS' then &both.='NYI';
+		if &both.='NY RANGERS' then &both.='NYR';
+		if &both.='OTTAWA' then &both.='OTT';
+		if &both.='PHILADELPHIA' then &both.='PHI';
+		if &both.='PHOENIX' then &both.='PHX';
+		if &both.='PITTSBURGH' then &both.='PIT';
+		if &both.='SAN JOSE' then &both.='SJS';
+		if &both.='ST LOUIS' then &both.='STL';
+		if &both.='TAMPA BAY' then &both.='TBL';
+		if &both.='TORONTO' then &both.='TOR';
+		if &both.='VANCOUVER' then &both.='VAN';
+		if &both.='WASHINGTON' then &both.='WSH';
+		if &both.='WINNIPEG' then &both.='WPG';
+		if &both.='ATLANTA' then &both.='ATL';
+%mend both;
+%both(home);
+%both(visitor);
+
+	run;
+
+*******MERGE ON TV INFO TO GAME RESULTS****;
+
+****REMOVE ANY DUPLICATES FROM GAME RESULTS***;
+proc sort data=use.gm_results nodupkey;
+	by clean_date visitor visitor_score Home home_score ot_so w_Goalie wt_goal visitor_Shots	visitor_PPGF	visitor_PPOpp	visitor_PIM	Home_Shots	home_PPGF	home_PPOpp	home_PIM	attendance;
+	run;
+
+****COLLECT YEARS OF TV DATA***;
+****DATASTEP WILL CLEAN TEAM NAMES AND REVERSE TV DATA FOR A OVERSEAS HOME & HOME MIXED UP IN THE DATA***;
+data use.tv_results (drop=date);
+	format clean_date;
+	format clean_date date10.;
+	set tv_0708 tv_0809 tv_0910 tv_1011 tv_1112 tv_1213 tv_1314;
+	clean_date=DATE;
+	visitor=upcase(strip(visitor));
+	home=upcase(strip(home));
+
+	***FLIP DATA FOR DET/STL HOME & HOME OVERSEAS***;
+	if clean_date in ('02OCT2009'd) & visitor="DETROIT" then do;
+			home="DETROIT";
+			visitor="ST LOUIS";
+			visitor2_tv=visitor_tv;
+			visitor2_duration=visitor_duration;
+			visitor2_rating=visitor_rating;
+			visitor2_share=visitor_share;
+			visitor2_000s=visitor_000s;
+			visitor2_p2plus=visitor_p2plus;
+			home2_tv=home_tv;
+			home2_duration=home_duration;
+			home2_rating=home_rating;
+			home2_share=home_share;
+			home2_000s=home_000s;
+			home2_p2plus=home_p2plus;
+			national_tv=national_tv;
+			national_tv1=national_tv1;
+			nat_visitor2_duration=nat_visitor_duration;
+			nat_visitor2_rating=nat_visitor_rating;
+			nat_visitor2_share=nat_visitor_share;
+			nat_visitor2_000s=nat_visitor_000s;
+			nat_visitor2_p2plus=nat_visitor_p2plus;
+			nat_home2_duration=nat_home_duration;
+			nat_home2_rating=nat_home_rating;
+			nat_home2_share=nat_home_share;
+			nat_home2_000s=nat_home_000s;
+			nat_home2_p2plus=nat_home_p2plus;
+			home_tv=visitor2_tv;
+			home_duration=visitor2_duration;
+			home_rating=visitor2_rating;
+			home_share=visitor2_share;
+			home_000s=visitor2_000s;
+			home_p2plus=visitor2_p2plus;
+			visitor_tv=home2_tv;
+			visitor_duration=home2_duration;
+			visitor_rating=home2_rating;
+			visitor_share=home2_share;
+			visitor_000s=home2_000s;
+			visitor_p2plus=home2_p2plus;
+			national_tv=national_tv;
+			national_tv1=national_tv1;
+			nat_home_duration=nat_visitor2_duration;
+			nat_home_rating=nat_visitor2_rating;
+			nat_home_share=nat_visitor2_share;
+			nat_home_000s=nat_visitor2_000s;
+			nat_home_p2plus=nat_visitor2_p2plus;
+			nat_visitor_duration=nat_home2_duration;
+			nat_visitor_rating=nat_home2_rating;
+			nat_visitor_share=nat_home2_share;
+			nat_visitor_000s=nat_home2_000s;
+			nat_visitor_p2plus=nat_home2_p2plus;
+	end;
+
+	if clean_date in ('03OCT2009'd) & home="DETROIT" then do;
+			visitor="DETROIT";
+			home="ST LOUIS";
+			visitor2_tv=visitor_tv;
+			visitor2_duration=visitor_duration;
+			visitor2_rating=visitor_rating;
+			visitor2_share=visitor_share;
+			visitor2_000s=visitor_000s;
+			visitor2_p2plus=visitor_p2plus;
+			home2_tv=home_tv;
+			home2_duration=home_duration;
+			home2_rating=home_rating;
+			home2_share=home_share;
+			home2_000s=home_000s;
+			home2_p2plus=home_p2plus;
+			national_tv=national_tv;
+			national_tv1=national_tv1;
+			nat_visitor2_duration=nat_visitor_duration;
+			nat_visitor2_rating=nat_visitor_rating;
+			nat_visitor2_share=nat_visitor_share;
+			nat_visitor2_000s=nat_visitor_000s;
+			nat_visitor2_p2plus=nat_visitor_p2plus;
+			nat_home2_duration=nat_home_duration;
+			nat_home2_rating=nat_home_rating;
+			nat_home2_share=nat_home_share;
+			nat_home2_000s=nat_home_000s;
+			nat_home2_p2plus=nat_home_p2plus;
+			home_tv=visitor2_tv;
+			home_duration=visitor2_duration;
+			home_rating=visitor2_rating;
+			home_share=visitor2_share;
+			home_000s=visitor2_000s;
+			home_p2plus=visitor2_p2plus;
+			visitor_tv=home2_tv;
+			visitor_duration=home2_duration;
+			visitor_rating=home2_rating;
+			visitor_share=home2_share;
+			visitor_000s=home2_000s;
+			visitor_p2plus=home2_p2plus;
+			national_tv=national_tv;
+			national_tv1=national_tv1;
+			nat_home_duration=nat_visitor2_duration;
+			nat_home_rating=nat_visitor2_rating;
+			nat_home_share=nat_visitor2_share;
+			nat_home_000s=nat_visitor2_000s;
+			nat_home_p2plus=nat_visitor2_p2plus;
+			nat_visitor_duration=nat_home2_duration;
+			nat_visitor_rating=nat_home2_rating;
+			nat_visitor_share=nat_home2_share;
+			nat_visitor_000s=nat_home2_000s;
+			nat_visitor_p2plus=nat_home2_p2plus;
+
+	end;
+
+***CALL 'BOTH' MACRO TO STANDARDIZE TEAM NAMES FROM ABOVE****;
+
+%both(home);
+%both(visitor);
+
+run;
+
+****SORT & MERGE GAME RESULT AND TV DATASETS***;
+proc sort data=use.gm_results; by clean_date visitor; run;
+proc sort data=use.tv_results; by clean_date visitor; run;
+
+data gm_tv_dataset;
+	merge use.gm_results (in=a) use.tv_results (in=b);
+	by clean_date visitor home;
+	if a;
+	if ot_so="SO" then so=1; else so=0;
+	if ot_so="OT" then ot=1; else ot=0;
+	run;
+
+****MERGE ON TEAM, DIVISION INFO***;
+****THIS DATASET IS FOUND: F:\Competition\PBoberg17632.00-HOCKEY\Analysis\NHL Game Results\CWA\data;
+proc import datafile="F:\Competition\PBoberg17632.00-HOCKEY\Analysis\NHL Game Results\CWA\data\Team Division Xwalk.xlsx"
+	out=team_div dbms=&dbms. replace;
+	run;
+
+****SPLIT IT UP FOR HOME & AWAY DIVISION XWALKS***;
+proc sort data=team_div out=visitor_div (drop=team f: rename=(abbrev=visitor division=visitor_division conference=visitor_conference));
+	by season_ending team;
+	run;
+proc sort data=team_div out=home_div (drop=team f: rename=(abbrev=home division=home_division conference=home_conference));
+	by season_ending team;
+	run;
+
+****MERGE ON FOR HOME & AWAY DIVISION XWALKS***;
+proc sql;
+	create table use.gm_tv_dataset as
+	select *
+	from gm_tv_dataset as a, visitor_div as b, home_div as c
+	where (a.season_ending=b.season_ending & a.visitor=b.visitor) & (a.season_ending=c.season_ending & a.home=c.home);
+	quit;
+
+****CREATE A DATASET WITH ALL DAYS IN WHICH GAMES ARE PLAYED FOR LATER***;
+proc sort data=use.gm_tv_dataset (keep=season_ending clean_date) nodupkey out=time_brace;
+	by season_ending clean_date;
+	run;
+
+****CREATE A 'DAY' COUNT FOR EACH SEASON TO BE TRANSPOSED LATER***;
+data time_brace;
+	set time_brace;
+	by season_ending clean_date;
+	if first.season_ending then day=1;
+	else day+1;
+	run;
+
+*****COMPILE CUMULATIVE RECORD FOR EACH TEAM**********;
+*****MACRO GOES THROUGH EACH FRANCHISE INDIVIDUALLY AND COMPILES CUMULATIVE RECORDS/STATS***;
+%macro cum(nm);
+
+proc sort data=use.gm_tv_dataset (keep=season_ending clean_date visitor visitor_score home visitor_division home_division  visitor_conference home_conference  home_score ot so playoffs) nodupkey out=&nm._ds;
+	where visitor="&nm." or home="&nm.";
+	by season_ending clean_date;
+	run;
+
+proc sort data=time_brace;
+	by season_ending clean_date;
+	run;
+
+****MERGE ON INDIVIDUAL TEAM DATA TO DATASET WITH ALL DAYS***;
+****RECORD AND TRACK INDIVIDUAL RESULTS;
+data &nm._ds (drop=cum_row cum_sow cum_otl cum_loss cum_points result last_result);
+	format result;
+	merge &nm._ds (in=a) time_brace (in=b);
+	by season_ending clean_date;
+	format result $5.;
+
+****RECORD RESULTS***;
+	if visitor="&nm." & (visitor_score > home_score) & so=0 then result="row";
+			else if visitor="&nm." & (visitor_score > home_score) & so=1 then result="sow";
+			else if visitor="&nm." & (visitor_score < home_score) & (ot+so)>0 then result="otl";
+			else if visitor="&nm." & (visitor_score < home_score) & (ot+so)=0 then result="loss";
+			else if home="&nm." & (home_score > visitor_score) & so=0  then result="row";
+			else if home="&nm." & (home_score > visitor_score) & so=1  then result="sow";
+			else if home="&nm." & (home_score < visitor_score) & (ot+so)>0 then result="otl";
+			else if home="&nm." & (home_score < visitor_score) & (ot+so)=0 then result="loss";
+	last_result=lag(result);
+
+****BEGIN COUNTING AND TRACKING TEAM RECORD***;
+	if first.season_ending then do;
+		day=0;
+		cum_row=0;
+		cum_sow=0;
+		cum_loss=0;
+		cum_otl=0;
+		cum_gp=0;
+	end;
+
+	else do;
+			if last_result in ("row" "sow" "otl" "loss") then cum_gp+1;
+			if last_result=("row") then cum_row+1;
+			if last_result=("sow") then cum_sow+1;
+			if last_result="otl" then cum_otl+1;
+			if last_result="loss" then cum_loss+1;
+	end;
+
+	cum_points=(cum_row*2)+(cum_sow*2)+cum_otl;
+	if cum_gp >0 then cum_wpt_&nm.=cum_points/(cum_gp*2); 
+	else cum_wpt_&nm.=0;
+
+****ASSIGN TO INDIVIDUAL TEAM***;
+
+	cum_gp_&nm.=cum_gp;
+	cum_row_&nm.=cum_row;
+	cum_sow_&nm.=cum_sow;
+	cum_otl_&nm.=cum_otl;
+	cum_loss_&nm.=cum_loss;
+	cum_points_&nm.=cum_points;
+
+	run;
+
+****SORT TEAM DATASET IN PREPERATION OF MERGING BACK TOGETHER***;
+proc sort data=&nm._ds;
+	by season_ending clean_date visitor visitor_score home home_score so ot;
+	run;
+
+%mend cum;
+%cum(ATL);
+%cum(ANA);
+%cum(BOS);
+%cum(BUF);
+%cum(CGY);
+%cum(CAR);
+%cum(CBJ);
+%cum(CHI);
+%cum(COL);
+%cum(DAL);
+%cum(DET);
+%cum(EDM);
+%cum(FLA);
+%cum(LAK);
+%cum(MIN);
+%cum(MTL);
+%cum(NSH);
+%cum(NJD);
+%cum(NYI);
+%cum(NYR);
+%cum(OTT);
+%cum(PHI);
+%cum(PHX);
+%cum(PIT);
+%cum(SJS);
+%cum(STL);
+%cum(TBL);
+%cum(TOR);
+%cum(VAN);
+%cum(WSH);
+%cum(WPG);
+
+
+*******APPLY CUMULATIVE RECORDS TO HOME/AWAY IN GAME DATASET***********;
+****MERGE TEAM CUMULATIVE RECORD DATASETS***;
+
+****TIME SERIES OF INDIVIDUAL TEAM POINTS***;
+data contemp_points (keep=season_ending clean_date day cum_:);
+	merge ANA_ds ATL_ds	BOS_ds	BUF_ds	CGY_ds	CAR_ds	CBJ_ds	CHI_ds	COL_ds	DAL_ds	DET_ds	EDM_ds	FLA_ds	LAK_ds	
+	MIN_ds	MTL_ds	NSH_ds	NJD_ds	NYI_ds	NYR_ds	OTT_ds	PHI_ds	PHX_ds	PIT_ds	SJS_ds	STL_ds	TBL_ds	TOR_ds	VAN_ds	WSH_ds	WPG_ds;
+	by season_ending clean_date day;
+	run;
+
+****DATASET OF TEAM SCORES***;
+data team_scores (drop=cum_:);
+	merge ANA_ds ATL_ds	BOS_ds	BUF_ds	CGY_ds	CAR_ds	CBJ_ds	CHI_ds	COL_ds	DAL_ds	DET_ds	EDM_ds	FLA_ds	LAK_ds	
+	MIN_ds	MTL_ds	NSH_ds	NJD_ds	NYI_ds	NYR_ds	OTT_ds	PHI_ds	PHX_ds	PIT_ds	SJS_ds	STL_ds	TBL_ds	TOR_ds	VAN_ds	WSH_ds	WPG_ds;
+	by season_ending clean_date visitor visitor_score home home_score so ot;
+	if home ne " ";
+	run;
+
+****DATASTEP TO CREATE MASTER DATASET (ALL) AND DATASET TO COMPUTE CONTEMPORARY RANKS (RANKS);
+data all (drop=ctmp: cum_:) ranks (keep=playoffs season_ending visitor visitor_division home_division visitor_conference home_conference home clean_date ctmp: playoffs);
+	retain ctmp: ;
+	merge team_scores (in=a) contemp_points (in=b);
+	by season_ending clean_date day;
+	
+		****APPLIES THE TEAM CUMULATIVE RECORD TO SAME FIELD***;
+		%macro apply(nm);
+		 
+		if visitor="&nm." then do;
+			visitor_cum_gp=cum_gp_&nm.;
+			visitor_cum_wpt=cum_wpt_&nm.;
+			visitor_cum_row=cum_row_&nm.;
+			visitor_cum_sow=cum_sow_&nm.;
+			visitor_cum_otl=cum_otl_&nm.;
+			visitor_cum_loss=cum_loss_&nm.;
+			visitor_cum_points=cum_points_&nm.;
+		end;
+
+		if home="&nm." then do;
+			home_cum_gp=cum_gp_&nm.;
+			home_cum_wpt=cum_wpt_&nm.;
+			home_cum_row=cum_row_&nm.;
+			home_cum_sow=cum_sow_&nm.;
+			home_cum_otl=cum_otl_&nm.;
+			home_cum_loss=cum_loss_&nm.;
+			home_cum_points=cum_points_&nm.;
+		end;
+
+
+		%mend apply;
+		%apply(ATL);
+		%apply(ANA);
+		%apply(BOS);
+		%apply(BUF);
+		%apply(CGY);
+		%apply(CAR);
+		%apply(CBJ);
+		%apply(CHI);
+		%apply(COL);
+		%apply(DAL);
+		%apply(DET);
+		%apply(EDM);
+		%apply(FLA);
+		%apply(LAK);
+		%apply(MIN);
+		%apply(MTL);
+		%apply(NSH);
+		%apply(NJD);
+		%apply(NYI);
+		%apply(NYR);
+		%apply(OTT);
+		%apply(PHI);
+		%apply(PHX);
+		%apply(PIT);
+		%apply(SJS);
+		%apply(STL);
+		%apply(TBL);
+		%apply(TOR);
+		%apply(VAN);
+		%apply(WSH);
+		%apply(WPG);
+
+		****FROM DAY 1 COUNT EACH METRIC***;
+		%macro value(value,retain);
+
+		if day=1 then do;
+		ctmp_&retain._ATL=0;
+		ctmp_&retain._ANA=0;
+		ctmp_&retain._BOS=0;
+		ctmp_&retain._BUF=0;
+		ctmp_&retain._CGY=0;
+		ctmp_&retain._CAR=0;
+		ctmp_&retain._CBJ=0;
+		ctmp_&retain._CHI=0;
+		ctmp_&retain._COL=0;
+		ctmp_&retain._DAL=0;
+		ctmp_&retain._DET=0;
+		ctmp_&retain._EDM=0;
+		ctmp_&retain._FLA=0;
+		ctmp_&retain._LAK=0;
+		ctmp_&retain._MIN=0;
+		ctmp_&retain._MTL=0;
+		ctmp_&retain._NSH=0;
+		ctmp_&retain._NJD=0;
+		ctmp_&retain._NYI=0;
+		ctmp_&retain._NYR=0;
+		ctmp_&retain._OTT=0;
+		ctmp_&retain._PHI=0;
+		ctmp_&retain._PHX=0;
+		ctmp_&retain._PIT=0;
+		ctmp_&retain._SJS=0;
+		ctmp_&retain._STL=0;
+		ctmp_&retain._TBL=0;
+		ctmp_&retain._TOR=0;
+		ctmp_&retain._VAN=0;
+		ctmp_&retain._WSH=0;
+		ctmp_&retain._WPG=0;
+		end;
+		else do;
+		if cum_&value._ATL ne . then ctmp_&retain._ATL=cum_&value._ATL;
+		if cum_&value._ANA ne . then ctmp_&retain._ANA=cum_&value._ANA;
+		if cum_&value._BOS ne . then ctmp_&retain._BOS=cum_&value._BOS;
+		if cum_&value._BUF ne . then ctmp_&retain._BUF=cum_&value._BUF;
+		if cum_&value._CGY ne . then ctmp_&retain._CGY=cum_&value._CGY;
+		if cum_&value._CAR ne . then ctmp_&retain._CAR=cum_&value._CAR;
+		if cum_&value._CBJ ne . then ctmp_&retain._CBJ=cum_&value._CBJ;
+		if cum_&value._CHI ne . then ctmp_&retain._CHI=cum_&value._CHI;
+		if cum_&value._COL ne . then ctmp_&retain._COL=cum_&value._COL;
+		if cum_&value._DAL ne . then ctmp_&retain._DAL=cum_&value._DAL;
+		if cum_&value._DET ne . then ctmp_&retain._DET=cum_&value._DET;
+		if cum_&value._EDM ne . then ctmp_&retain._EDM=cum_&value._EDM;
+		if cum_&value._FLA ne . then ctmp_&retain._FLA=cum_&value._FLA;
+		if cum_&value._LAK ne . then ctmp_&retain._LAK=cum_&value._LAK;
+		if cum_&value._MIN ne . then ctmp_&retain._MIN=cum_&value._MIN;
+		if cum_&value._MTL ne . then ctmp_&retain._MTL=cum_&value._MTL;
+		if cum_&value._NSH ne . then ctmp_&retain._NSH=cum_&value._NSH;
+		if cum_&value._NJD ne . then ctmp_&retain._NJD=cum_&value._NJD;
+		if cum_&value._NYI ne . then ctmp_&retain._NYI=cum_&value._NYI;
+		if cum_&value._NYR ne . then ctmp_&retain._NYR=cum_&value._NYR;
+		if cum_&value._OTT ne . then ctmp_&retain._OTT=cum_&value._OTT;
+		if cum_&value._PHI ne . then ctmp_&retain._PHI=cum_&value._PHI;
+		if cum_&value._PHX ne . then ctmp_&retain._PHX=cum_&value._PHX;
+		if cum_&value._PIT ne . then ctmp_&retain._PIT=cum_&value._PIT;
+		if cum_&value._SJS ne . then ctmp_&retain._SJS=cum_&value._SJS;
+		if cum_&value._STL ne . then ctmp_&retain._STL=cum_&value._STL;
+		if cum_&value._TBL ne . then ctmp_&retain._TBL=cum_&value._TBL;
+		if cum_&value._TOR ne . then ctmp_&retain._TOR=cum_&value._TOR;
+		if cum_&value._VAN ne . then ctmp_&retain._VAN=cum_&value._VAN;
+		if cum_&value._WSH ne . then ctmp_&retain._WSH=cum_&value._WSH;
+		if cum_&value._WPG ne . then ctmp_&retain._WPG=cum_&value._WPG;
+		end;
+		%mend value;
+		%value(points,pts);
+		%value(row,rowins);
+		%value(wpt,winpct);
+		%value(gp,gp);
+
+	run;
+
+****TAKE EACH TEAMS MAXIMUM METRIC PER DAY***;
+proc means data=ranks nway noprint;
+	where playoffs=0;
+	class season_ending clean_date /missing;
+	var ctmp_pts: ctmp_row: ctmp_winpct: ctmp_gp:;
+output out=day_max (drop=_:) max=;
+	run;
+
+
+***BREAKUP RANKS INTO POINTS, REGULATION WINS, AND WINNING PERCENTAGE THEN MERGE TO FIGURE OUT RANKINGS***;
+***CREATE LONG DATASET, BY DAY & TEAM***;
+%macro bu(var,nm);
+
+proc transpose data=day_max out=day_long_&nm. (rename=(col1=&nm.));
+	by season_ending clean_date;
+	var &var.:;
+	run;
+
+data day_long_&nm. (drop=_name_);
+	set day_long_&nm.;
+	team=substr(strip(_name_),length(strip(_name_))-2,3);
+run;
+proc sort data=day_long_&nm. ; by season_ending clean_date team; run;
+
+%mend bu;
+%bu(ctmp_pts,points);
+%bu(ctmp_row,row);
+%bu(ctmp_winpct,winpct);
+%bu(ctmp_gp,gp);
+
+***CREATE LONG DATASET, BY DAY & TEAM & METRICS***;
+data rank_long;
+	merge day_long_points day_long_row day_long_winpct day_long_gp;
+	by season_ending clean_date team;
+	run;
+
+***MERGE ON DIVISIONS****;
+proc sort data=team_div out=team_div2 (keep=season_ending abbrev division conference rename=(abbrev=team));
+	by season_ending abbrev;
+	run;
+
+proc sort data=rank_long;
+	by season_ending team clean_date;
+	run;
+
+data rank_long2;
+	merge rank_long (in=a) team_div2 (in=b);
+	by season_ending team;
+	if a & b;
+
+***TREAT ROW & WINS AS THE SAME BEFORE THE 2010 SEASON***;
+***CREATE SORT METRIC, RANK_NUM***;
+if clean_date < '10SEP2010'd then rank_num=(10000*points)+(winpct*100)-(gp/100);
+		else rank_num=(10000*points)+(winpct*100)-(gp/100)+(row/10);
+	run;
+
+proc sort data=rank_long2;
+	by season_ending clean_date conference division rank_num;
+	run;
+
+proc sort data=team_scores;
+	by season_ending clean_date home_conference home_division home;
+	run;
+
+
+*******FIND RANKINGS EACH DAY, BY CONFERENCE & DIVISION****;	
+%macro ranks(class,nm);
+
+proc sort data=rank_long2 (keep=season_ending team &class. clean_date  rank_num) out=byday_&nm.;
+	by season_ending &class. clean_date  rank_num;
+	run;
+
+proc rank data=byday_&nm. out=rank_byday_&nm.  ties=high descending;
+	by season_ending &class. clean_date ;
+	var rank_num;
+run; 
+
+proc sort data=rank_byday_&nm. out=rank_byday_&nm._4home (drop=&class. rename=(team=home rank_num=home_&nm._rank));
+	by season_ending clean_date team;
+	run;
+
+proc sort data=rank_byday_&nm. out=rank_byday_&nm._4away (drop=&class. rename=(team=visitor rank_num=visitor_&nm._rank));
+	by season_ending clean_date team;
+	run;
+
+%mend ranks;
+%ranks(division,div);
+%ranks(conference,con);
+
+***MERGE RANKINGS ONTO MASTER DATASET (ALL);
+***HOME MERGE***;
+proc sort data=all;
+	by season_ending clean_date home;
+	run;
+
+data all2;
+	merge all (in=a) rank_byday_div_4home rank_byday_con_4home;
+	by season_ending clean_date home ;
+	if a;
+	run;
+
+***AWAY MERGE***;
+proc sort data=all2;
+	by season_ending clean_date visitor;
+	run;
+
+data all3;
+	merge all2 (in=a) rank_byday_div_4away rank_byday_con_4away;
+	by season_ending clean_date visitor;
+	if a;
+	run;
+
+***MERGE ON TO GAME, TV DATASET***;
+proc sort data=use.gm_tv_dataset out=game_tv;
+	by season_ending clean_date;
+	run;
+
+data use.game_result_regression_ds;
+	format clean_date	attendance	visitor	visitor_score	Home	home_score	home_row_wins home_sow_wins home_cum_loss	home_cum_otl	home_cum_points	home_div_rank	home_con_rank	home_division	home_conference	visitor_row_wins visitor_sow_wins visitor_cum_loss	visitor_cum_otl	visitor_cum_points	visitor_div_rank	visitor_con_rank	visitor_division	visitor_conference	TIME		season_ending	GM	DAY	home_tv	home_duration	home_rating	home_share	home_000s	home_p2plus	visitor_tv	visitor_duration	visitor_rating	visitor_share	visitor_000s	visitor_p2plus	home_national_tv	nat_home_duration	nat_home_rating	nat_home_share	nat_home_000s	nat_home_p2plus	visitor_national_tv	nat_visitor_duration	nat_visitor_rating	nat_visitor_share	nat_visitor_000s	nat_visitor_p2plus			ot	so;
+	merge game_tv all3 (drop=day);
+	by season_ending clean_date;
+
+home_cum_wins=home_cum_sow+home_cum_row;
+visitor_cum_wins=visitor_cum_sow+visitor_cum_row;
+
+***CLEAN UP VARIABLES TO MATCH***;
+if season_ending="2006" then season="2005-2006";
+if season_ending="2007" then season="2006-2007";
+if season_ending="2008" then season="2007-2008";
+if season_ending="2009" then season="2008-2009";
+if season_ending="2010" then season="2009-2010";
+if season_ending="2011" then season="2010-2011";
+if season_ending="2012" then season="2011-2012";
+if season_ending="2013" then season="2012-2013";
+if season_ending="2014" then season="2013-2014";
+
+***VAR FIX***;
+%macro varfix(var);
+
+if &var.+0 ne . then &var.2=input(&var.+0,$50.);
+	else if &var.="" then &var.2="";
+	else &var.2=&var.;
+
+drop &var.;
+rename &var.2=&var.;
+
+%mend varfix;
+%varfix(home_tv);
+%varfix(home_duration);
+%varfix(home_rating);
+%varfix(home_share);
+%varfix(home_000s);
+%varfix(home_p2plus);
+%varfix(visitor_tv);
+%varfix(visitor_duration);
+%varfix(visitor_rating);
+%varfix(visitor_share);
+%varfix(visitor_000s);
+%varfix(visitor_p2plus);
+%varfix(nat_home_duration);
+%varfix(nat_home_rating);
+%varfix(nat_home_share);
+%varfix(nat_home_000s);
+%varfix(nat_home_p2plus);
+%varfix(nat_visitor_duration);
+%varfix(nat_visitor_rating);
+%varfix(nat_visitor_share);
+%varfix(nat_visitor_000s);
+%varfix(nat_visitor_p2plus);
+
+***ADD IN SPECIAL VARIABLES***;
+format special $40.;
+if clean_date='01Jan2010'd and visitor='PHI' and home='BOS' then special='Winter Classic';
+if clean_date='01Jan2008'd and visitor='PIT' and home='BUF' then special='Winter Classic';
+if clean_date='20Feb2011'd and visitor='MTL' and home='CGY' then special='Heritage Classic';
+if clean_date='01Jan2009'd and visitor='DET' and home='CHI' then special='Winter Classic';
+if clean_date='01Mar2014'd and visitor='PIT' and home='CHI' then special='Stadium Series';
+if clean_date='01Jan2014'd and visitor='TOR' and home='DET' then special='Winter Classic';
+if clean_date='25Jan2014'd and visitor='ANA' and home='LAK' then special='Stadium Series';
+if clean_date='26Jan2014'd and visitor='NYR' and home='NJD' then special='Stadium Series';
+if clean_date='29Jan2014'd and visitor='NYR' and home='NYI' then special='Stadium Series';
+if clean_date='02Jan2012'd and visitor='NYR' and home='PHI' then special='Winter Classic';
+if clean_date='01Jan2011'd and visitor='WSH' and home='PIT' then special='Winter Classic';
+if clean_date='02Mar2014'd and visitor='OTT' and home='VAN' then special='Heritage Classic';
+
+run;
+
+*******MERGE ON CAPACITY DATA*******;
+proc import datafile="F:\Competition\PBoberg17632.00-HOCKEY\Analysis\NHL Game Results\CWA\data\City Xwalk.xlsx"
+	out=capacity dbms=&dbms. replace;
+	run;
+
+data home_info (keep=home season_ending capacity ln_capacity population ln_population 
+	rename=(population=home_population ln_population=ln_home_population))
+	visitor_info (keep=home season_ending population ln_population 
+	rename=(home=visitor population=visitor_population ln_population=ln_visitor_population));
+	set capacity;
+	run;
+
+****MERGE ON TEAM CAPACITY INFORMATION***;
+proc sql;
+	create table use.game_result_regression_ds as
+	select *
+	from use.game_result_regression_ds as a, home_info as b, visitor_info as c
+	where (a.home=b.home & a.season_ending=b.season_ending) & (a.visitor=c.visitor & a.season_ending=c.season_ending)
+	order by season_ending, clean_date;
+	quit;
+
+****IDENTIFY CAPACITY, ORIG 6, DIVISION/CONFERENCE LEADERS, MOVING TEAMS, AND ROUNDING***;
+data use.game_result_regression_ds;
+	set use.game_result_regression_ds;
+	if attendance ge capacity then cap=1; else cap=0;
+	if home in ("TOR" "MTL" "BOS" "CHI" "NYR" "DET") then home_orig_six=1; else home_orig_six=0;
+	if visitor in ("TOR" "MTL" "BOS" "CHI" "NYR" "DET") then visitor_orig_six=1; else visitor_orig_six=0;
+	if home_div_rank le 1 then home_top1_div=1; else home_top1_div=0;
+	if visitor_div_rank le 1 then visitor_top1_div=1; else visitor_top1_div=0;
+	if home_con_rank le 4 then home_top4_con=1; else home_top4_con=0;
+	if visitor_con_rank le 4 then visitor_top4_con=1; else visitor_top4_con=0;
+
+****SET CAPACITY FOR SPECIAL GAMES EQUAL TO ATTENDENCE****;
+if special ne " " then capacity=attendance;
+if capacity=0 then capacity=attendance;
+
+if home="PIT" & season_ending in (2006 2007 2008 2009 2010) then capacity=17132;
+if home="NJD" & season_ending in (2006 2007) then capacity=19040;
+
+visitor_moving_team=0;
+home_moving_team=0;
+
+	if visitor="WPG" then do;
+		if season_ending=2012 then visitor_moving_team=1;
+		if season_ending=2013 then visitor_moving_team=2;
+		if season_ending=2014 then visitor_moving_team=3;
+		end;
+	else if home="WPG" then do;
+		if season_ending=2012 then home_moving_team=1;
+		if season_ending=2013 then home_moving_team=2;
+		if season_ending=2014 then home_moving_team=3;
+		end;
+
+		ln_attendance=log(attendance);
+
+		home_tv=upcase(strip(home_tv));
+		home_duration=upcase(strip(round(home_duration,.001)));
+		home_rating=upcase(strip(round(home_rating,.001)));
+		home_share=upcase(strip(round(home_share,.001)));
+		home_000s=upcase(strip(round(home_000s,.001)));
+		home_p2plus=upcase(strip(round(home_p2plus,.001)));
+		visitor_tv=upcase(strip(visitor_tv));
+		visitor_duration=upcase(strip(round(visitor_duration,.001)));
+		visitor_rating=upcase(strip(round(visitor_rating,.001)));
+		visitor_share=upcase(strip(round(visitor_share,.001)));
+		visitor_000s=upcase(strip(round(visitor_000s,.001)));
+		visitor_p2plus=upcase(strip(round(visitor_p2plus,.001)));
+		home_national_tv=upcase(strip(home_national_tv));
+		nat_home_duration=upcase(strip(round(nat_home_duration,.001)));
+		nat_home_rating=upcase(strip(round(nat_home_rating,.001)));
+		nat_home_share=upcase(strip(round(nat_home_share,.001)));
+		nat_home_000s=upcase(strip(round(nat_home_000s,.001)));
+		nat_home_p2plus=upcase(strip(round(nat_home_p2plus,.001)));
+		visitor_national_tv=upcase(strip(visitor_national_tv));
+		nat_visitor_duration=upcase(strip(round(nat_visitor_duration,.001)));
+		nat_visitor_rating=upcase(strip(round(nat_visitor_rating,.001)));
+		nat_visitor_share=upcase(strip(round(nat_visitor_share,.001)));
+		nat_visitor_000s=upcase(strip(round(nat_visitor_000s,.001)));
+		nat_visitor_p2plus=upcase(strip(round(nat_visitor_p2plus,.001)));
+	run;
+
+****COMPETING LEAGUE SCHEDLUES***;
+****READIN METRO CROSSWALKS***;
+****FOUND IN: F:\Competition\PBoberg17632.00-Hockey\Analysis\NHL Game Results\CWA\data***;
+
+%macro metro(ds);
+proc import datafile="F:\Competition\PBoberg17632.00-Hockey\Analysis\NHL Game Results\CWA\data\Metro Xwalk.xlsx"
+	out=&ds._metro replace dbms=&dbms.;
+	sheet="&ds.";
+	run;
+%mend metro;
+%metro(NHL);
+%metro(NBA);
+%metro(NFL);
+%metro(MLB);
+
+
+****NBA***;
+proc import datafile="F:\Competition\PBoberg17632.00-Hockey\Third Party Data\League Schedules\NBA\leagues_NBA_2006_games_games.csv"
+	out=nba_2006 dbms=csv replace;
+	datarow=2;
+	getnames=yes;
+	guessingrows=1000;
+	run;
+data nba_2006 (drop=date);
+	set nba_2006 (keep=date Visitor_Neutral Home_Neutral rename=(Visitor_Neutral=visitor Home_Neutral=home));
+	format clean_date date10.;
+	clean_date=input(strip(scan(date,3," "))||strip(upcase(scan(date,2," ")))||strip(scan(date,-1," ")),date10.);
+	season_ending="2006";
+	run;
+
+%macro nba(yr);
+%do i=2007 %to &yr.;
+proc import datafile="F:\Competition\PBoberg17632.00-Hockey\Third Party Data\League Schedules\NBA\leagues_NBA_&i._games_games.csv"
+	out=nba_&i. dbms=csv replace;
+	datarow=3;
+	getnames=yes;
+	guessingrows=1000;
+	run;
+data nba_&i. (drop=var1);
+	set nba_&i. (keep=var1 var3 var5 rename=(var3=visitor var5=home));
+	format clean_date date10.;
+	clean_date=input(strip(scan(var1,3," "))||strip(upcase(scan(var1,2," ")))||strip(scan(var1,-1," ")),date10.);
+	season_ending="&i.";
+	run;
+%end;
+%mend nba;
+%nba(2014);
+
+****NBA PLAYOFFS;
+%macro nbapo(yr);
+%do i=2006 %to &yr.;
+data nbapo_&i. (compress=yes);
+	infile "F:\Competition\PBoberg17632.00-Hockey\Third Party Data\League Schedules\NBA\NBA Playoffs Txt Files\Playoffs&i..txt"
+	missover dsd lrecl =3200 dlm="," firstobs=2;
+	informat date  $24.; format date  $24.;
+	informat blank  $48.; format blank  $48.;
+	informat visitor  $40.; format visitor  $40.;
+	informat visitor_score  $24.; format visitor_score  $24.;
+	informat home  $40.; format home  $40.;
+	informat home_score  $24.; format home_score  $24.;
+	informat blank  $8.; format blank  $8.;
+	informat note  $8.; format note  $8.;
+	input date $	blank $	visitor $	visitor_score $	home $	home_score $ blank	 $	note $	;
+	run;
+data nbapo_&i. (drop=date);
+	set nbapo_&i. (keep=visitor home date);
+	format clean_date date10.;
+	clean_date=input(strip(scan(date,3," "))||strip(upcase(scan(date,2," ")))||strip(scan(date,-1," ")),date10.);
+	season_ending="&i.";
+	run;
+%end;
+%mend nbapo;
+%nbapo(2014);
+
+data nba_all;
+	set nba_2006 - nba_2014 nbapo_2006 - nbapo_2014;
+	run;
+
+****MLB***;
+%macro mlb(yr);
+%do i=2005 %to &yr.;
+data mlb_&i. (compress=yes);
+	infile "F:\Competition\PBoberg17632.00-Hockey\Third Party Data\League Schedules\MLB\&i.SKED.txt"
+	missover dsd lrecl =3200 dlm="," firstobs=1;
+	informat date  $24.; format date  $24.;
+	informat blank  $48.; format blank  $48.;
+	informat day  $16.; format day  $16.;
+	informat visitor  $40.; format visitor  $40.;
+	informat away_league  $24.; format away_league  $24.;
+	informat blank  $24.; format blank  $24.;
+	informat home  $40.; format home  $40.;
+	informat home_league  $24.; format home_league  $24.;
+	informat blank  $8.; format blank  $8.;
+	informat blank  $8.; format blank  $8.;
+	informat blank  $8.; format blank  $8.;
+	informat blank  $8.; format blank  $8.;
+	input date $	blank $	day $	visitor $	away_league $	blank $	home $	home_league $	blank $	blank $	blank $	blank $;
+	run;
+data mlb_&i. ;
+	set mlb_&i. (drop=blank:);
+	format clean_date date10.;
+	mo=0+strip(substr(date,5,2));
+	if mo=1 then mon='JAN';
+	if mo=2 then mon='FEB';
+	if mo=3 then mon='MAR';
+	if mo=4 then mon='APR';
+	if mo=5 then mon='MAY';
+	if mo=6 then mon='JUN';
+	if mo=7 then mon='JUL';
+	if mo=8 then mon='AUG';
+	if mo=9 then mon='SEP';
+	if mo=10 then mon='OCT';
+	if mo=11 then mon='NOV';
+	if mo=12 then mon='DEC';
+
+	clean_date=input(strip(substr(date,7,2))||mon||strip(substr(date,1,4)),date10.);
+	season_ending="&i.";
+	run;
+%end;
+%mend mlb;
+%mlb(2013);
+
+****MLB PLAYOFFS***;
+%macro mlbpo(yr);
+%do i=2006 %to &yr.;
+proc import datafile="F:\Competition\PBoberg17632.00-Hockey\Third Party Data\League Schedules\MLB\playoffs_MLB_games.xlsx"
+	out=mlbpo_&i. dbms=&dbms. replace;
+	sheet="&i.";
+	run;
+data mlbpo_&i. (drop=month day clean_date2 away);
+	set mlbpo_&i. (keep=away home month day);
+
+	if length(strip(day))=1 then clean_date2="0"||strip(day)||upcase(strip(substr(month,1,3)))||strip(&i.);
+		else clean_date2=strip(day)||upcase(strip(substr(month,1,3)))||strip(&i.);
+	format clean_date date10.;
+	clean_date=input(clean_date2,date10.);
+season_ending="&i.";
+	home=upcase(strip(home));
+	visitor=upcase(strip(away));
+	run;
+%end;
+%mend mlbpo;
+%mlbpo(2013);
+
+data mlb_all;
+	set mlb_2006 - mlb_2013 mlbpo_2006 - mlbpo_2013;
+	run;
+
+****NFL***;
+%macro nfl(yr);
+%do i=2005 %to &yr.;
+proc import datafile="F:\Competition\PBoberg17632.00-Hockey\Third Party Data\League Schedules\NFL\years_&i._games_games.csv"
+	out=nfl_&i. dbms=csv replace;
+	datarow=3;
+	getnames=yes;
+	guessingrows=1000;
+	run;
+data nfl_&i. (drop=var3 yr mo da var5 var7 var6);
+	set nfl_&i. (keep=var3 var5 var6 var7 where=(var3 not in ("Playoffs" "Date")));
+		yr=&i.;
+		mo=strip(upcase(substr(var3,1,3)));
+		da=strip(scan(var3,2," "));
+		if length(da)=1 then da="0"||da;
+	format clean_date date10.;
+	if upcase(mo) in ("FEB" "JAN") then	clean_date=input(strip(da)||strip(mo)||strip(yr+1),date10.);
+		else clean_date=input(strip(da)||strip(mo)||strip(yr),date10.);;
+	season_ending="&i.";
+	clean_date=round(clean_date,1);
+	***assign home team***;
+	if strip(var6) in ("@" "N") then do;
+	home=var7;
+	visitor=var5;
+	end;
+	else do;
+	home=var5;
+	visitor=var7;
+	end;
+	run;
+%end;
+%mend nfl;
+%nfl(2013);
+
+data nfl_all;
+	set nfl_2005 - nfl_2013;
+	run;
+
+****FIND UNIQUE LIST OF TEAMS IN NATIVE FORMAT***;
+proc sort data=nfl_all (keep=home visitor) nodupkey out=use.nfl_teams;	by home visitor;	run;
+proc sort data=use.game_result_regression_ds (keep=home) nodupkey out=use.nhl_teams; by home; run;
+proc sort data=mlb_all (keep=home visitor) nodupkey out=use.mlb_teams;	by home visitor;	run;
+proc sort data=nba_all (keep=home visitor) nodupkey out=use.nba_teams;	by home visitor;	run;
+
+****MERGE ON METRO XWALKS***;
+%macro inmarket(league);
+
+proc sort data=&league._all; by home; run;
+proc sort data=&league._metro; by &league.; run;
+
+data &league._all2 ;
+	merge &league._all (in=a) &league._metro (in=b rename=(&league.=home metro=home_metro));
+	by home;
+	if a;
+	run;
+
+proc sort data=&league._all2; by visitor; run;
+proc sort data=&league._metro; by &league.; run;
+
+data &league._all3 ;
+	merge &league._all2 (in=a) &league._metro (in=b rename=(&league.=visitor metro=visitor_metro));
+	by visitor;
+	if a;
+	if home_metro=visitor_metro then &league._inmarket=1; else &league._inmarket=0;
+	run;
+
+%mend inmarket;
+%inmarket(NFL);
+%inmarket(NBA);
+%inmarket(MLB);
+
+%macro competing(league,loc,nm);
+
+proc sql;
+	create table &league._&loc. as 
+	select metro as nhl_metro, clean_date, count(distinct &loc.) as &league._&nm._count, sum(&league._inmarket) as &league._inmarket
+	from &league._metro as b, &league._all3 as a
+	where a.&loc.=b.&league. & clean_date ne . & nhl_metro ne " "
+	group by clean_date, nhl_metro
+	order by clean_date, nhl_metro;
+	quit;
+
+%mend competing;
+%competing(NBA,home,home_game);
+%competing(NBA,visitor,road_game);
+%competing(NFL,home,home_game);
+%competing(NFL,visitor,road_game);
+%competing(MLB,home,home_game);
+%competing(MLB,visitor,road_game);
+
+****COUNT COMPETING METRO TEAM GAMES & TIDY UP COLUMNS***;
+****CREATE DATASET FOR NHL HOME & AWAY***;
+data metro_games_4away (drop=NBA_home_game_count MLB_home_game_count NFL_home_game_count NBA_road_game_count MLB_road_game_count NFL_road_game_count
+	rename=(nhl_metro=visitor_metro)) ;
+	format clean_date nhl_metro;
+	merge nba_home  nfl_home  mlb_home nba_visitor  nfl_visitor  mlb_visitor;
+	by clean_date nhl_metro;
+	****SUM HOME AND ROAD COMPETITION***; 
+	visitor_nba_game_count=sum(NBA_home_game_count,NBA_road_game_count);
+	visitor_mlb_game_count=sum(MLB_home_game_count,MLB_road_game_count);
+	visitor_nfl_game_count=sum(NFL_home_game_count,NFL_road_game_count);
+
+	***FIND IN-MARKET GAMES***;
+	if nba_inmarket=1 then visitor_nba_game_count=1;
+	if nfl_inmarket=1 then visitor_nfl_game_count=1;	
+	if mlb_inmarket=1 then visitor_mlb_game_count=1;
+	end;run;
+
+data metro_games_4home (drop=nba_inmarket mlb_inmarket nfl_inmarket rename=(nhl_metro=home_metro));
+	format clean_date nhl_metro ;
+	merge nba_home  nfl_home  mlb_home nba_visitor  nfl_visitor  mlb_visitor;
+	by clean_date nhl_metro;
+	if nba_inmarket=1 then do;
+	NBA_home_game_count=1;
+	NBA_road_game_count=0;
+	end;
+	if nfl_inmarket=1 then do;
+	NFL_home_game_count=1;
+	NFL_road_game_count=0;
+	end;	
+	if mlb_inmarket=1 then do;
+	MLB_home_game_count=1;
+	MLB_road_game_count=0;
+	end;
+	run;
+
+****GIVE NHL METRO AREAS***;
+proc sort data=nhl_metro; by NHL; run;
+data nhl_metro_visitor (rename=(NHL=visitor metro=visitor_metro)) nhl_metro_home (rename=(NHL=home metro=home_metro));
+	set nhl_metro;
+	run;
+
+proc sql;
+	create table game_result_reg_ds2 as 
+	select * 
+	from use.game_result_regression_ds as a, nhl_metro_home as b 
+	where b.home=a.home;
+	quit; 
+proc sql;
+	create table game_result_reg_ds3 as 
+	select *
+	from game_result_reg_ds2 as a, nhl_metro_visitor as b
+	where b.visitor=a.visitor;
+	quit;
+
+
+data metro_analysis;
+	set game_result_reg_ds3 (keep=home home_metro clean_date visitor visitor_metro 
+ where=((home_metro in ("NYC") or visitor_metro in ("NYC")) or (home_metro in ("LA-ANA") or visitor_metro in ("LA-ANA"))));
+	***NYC***;
+	if home_metro="NYC" then home_nyc_metro=1; else home_nyc_metro=0;
+	if visitor_metro="NYC" then road_nyc_metro=1; else road_nyc_metro=0;
+	***LA***;
+	if home_metro="LA-ANA" then home_la_metro=1; else home_la_metro=0;
+	if visitor_metro="LA-ANA" then road_la_metro=1; else road_la_metro=0;
+	***in purely market games are flagged***;
+	if home_metro="NYC" & visitor_metro="NYC" then nyc_in_market=1; 
+	else if home_metro="LA-ANA" & visitor_metro="LA-ANA" then la_in_market=1; 
+	else in_market=0;
+	run;
+
+proc sql;
+	create table metro_analysis_sum as
+	select clean_date, home, home_metro, visitor, visitor_metro, home_nyc_metro, road_nyc_metro, home_la_metro, road_la_metro, nyc_in_market, la_in_market,
+			sum(home_nyc_metro) as home_nyc_metro_count, sum(road_nyc_metro) as road_nyc_metro_count, sum(home_la_metro) as home_la_metro_count, 
+			sum(road_la_metro) as road_la_metro_count, sum(nyc_in_market) as nyc_in_market_count, sum(la_in_market) as la_in_market_count
+	from metro_analysis
+	group by clean_date
+	order by clean_date;
+	quit;
+
+data nyc_home_metro_count (keep=clean_date home home_NHL_home_competitor home_NHL_road_competitor nyc_in_market)  
+	 nyc_road_metro_count (keep=clean_date visitor visitor_NHL_competitor nyc_in_market)
+	 la_home_metro_count (keep=clean_date home home_NHL_home_competitor home_NHL_road_competitor la_in_market) 
+	 la_road_metro_count (keep=clean_date visitor visitor_NHL_competitor la_in_market); 
+
+		set metro_analysis_sum;
+
+	%macro metro(cap,nm);
+
+		if home_metro in ("&cap.") then do;
+			home_NHL_home_competitor=sum(home_&nm._metro_count,&nm._in_market_count)-sum(home_&nm._metro,&nm._in_market);
+			home_NHL_road_competitor=sum(road_&nm._metro_count,&nm._in_market_count)-sum(road_&nm._metro,&nm._in_market);
+			***find teams who have in-market games and set home comp to 1; 
+			if &nm._in_market=0 & &nm._in_market_count >0 then do;
+				home_NHL_home_competitor=1;
+				home_NHL_road_competitor=0;
+			end;
+				output &nm._home_metro_count;
+		end;
+		if visitor_metro in ("&cap.") then do;
+			visitor_NHL_competitor=sum(home_&nm._metro_count,road_&nm._metro_count,&nm._in_market_count)-sum(home_&nm._metro,road_&nm._metro,&nm._in_market);
+			***find teams who have in-market games and set home comp to 1; 
+			if &nm._in_market=0 & &nm._in_market_count >0 then visitor_NHL_competitor=visitor_NHL_competitor-2;
+			output &nm._road_metro_count;
+		end;
+
+	%mend metro;
+	%metro(NYC,nyc);
+	%metro(LA-ANA,la);
+run;
+
+
+***MERGE COMPETING (NHL) METRO GAMES DATASET ONTO NHL HOME TEAM***;
+proc sort data=nyc_home_metro_count; by clean_date home; run;
+proc sort data=la_home_metro_count; by clean_date home; run;
+proc sort data=game_result_reg_ds3; by clean_date home; run;
+
+data game_result_reg_ds3;
+	merge game_result_reg_ds3 (in=a) nyc_home_metro_count la_home_metro_count;
+	by clean_date home;
+	if a;
+	run;
+
+***MERGE COMPETING (NHL) METRO GAMES DATASET ONTO NHL AWAY TEAM***;
+proc sort data=nyc_road_metro_count; by clean_date visitor; run;
+proc sort data=la_road_metro_count; by clean_date visitor; run;
+proc sort data=game_result_reg_ds3; by clean_date visitor; run;
+
+data game_result_reg_ds3 (drop=nyc_in_market la_in_market);
+	merge game_result_reg_ds3 (in=a) nyc_road_metro_count la_road_metro_count;
+	by clean_date visitor;
+	if a;
+	metro_in_market=0;
+	metro_in_market=sum(nyc_in_market,la_in_market);
+	home_metro=upcase(strip(home_metro));
+	visitor_metro=upcase(strip(visitor_metro));
+	clean_date=strip(clean_date);
+	run;
+
+***MERGE COMPETING (NBA,NFL,MLB) METRO GAMES DATASET ONTO NHL HOME TEAM***;
+proc sort data=metro_games_4home; by clean_date home_metro; run;
+proc sort data=game_result_reg_ds3; by clean_date home_metro ; run;
+
+data game_result_reg_ds4;
+	merge game_result_reg_ds3 (in=a) metro_games_4home;
+	by clean_date home_metro;
+	if a;
+	run;
+
+proc sql;
+	create table game_result_reg_ds4 as
+	select *
+	from game_result_reg_ds3 as a left join metro_games_4home as b
+	on a.clean_date=b.clean_date & a.home_metro=b.home_metro;
+	quit;
+
+***MERGE COMPETING (NBA,NFL,MLB) METRO GAMES DATASET ONTO NHL AWAY TEAM***;
+proc sort data=metro_games_4away; by clean_date visitor_metro; run;
+proc sort data=game_result_reg_ds4; by clean_date visitor_metro ; run;
+
+data use.game_result_regression_ds;
+	merge game_result_reg_ds4 (in=a) metro_games_4away;
+	by clean_date visitor_metro;
+	if a;
+	array change _numeric_;
+           do over change;
+          	  if change=. then change=0;
+           end;
+	run;
+
+****COMPARE CODE****;
+proc sort data=use.game_result_regression_ds out=use.cwa_compare;	
+	by clean_date home;
+	run;
+
+proc sort data=scg.nhl_master out=scg_compare;
+	by date home;
+	run;
+
+***STANDARDIZE SCG DATA***;
+data scg_compare;
+	set scg_compare (rename=(home_division=home_division2 visitor_division=visitor_division2));
+	format home_division $32.;
+	format visitor_division $32.;
+		home_division=upcase(strip(home_division2));
+		home_conference=upcase(strip(home_conference));
+		visitor_division=upcase(strip(visitor_division2));
+		visitor_conference=upcase(strip(visitor_conference));
+		if ot_one=. then ot_one=0;
+		if shootout=. then shootout=0;
+		if home_division="METROPOLI" then home_division="METROPOLITAN";
+		if visitor_division="METROPOLI" then visitor_division="METROPOLITAN";
+		if home_six=. then home_six=0;
+		if visitor_six=. then visitor_six=0;
+
+		home_tv=upcase(strip(home_tv));
+		visitor_tv=upcase(strip(visitor_tv));
+		home_national_tv=upcase(strip(home_national_tv));
+		visitor_national_tv=upcase(strip(visitor_national_tv));
+		home_duration=upcase(strip(round(home_duration,.001)));
+		home_rtg=upcase(strip(round(home_rtg,.001)));
+		home_shr=upcase(strip(round(home_shr,.001)));
+		home_viewers=upcase(strip(round(home_viewers,.001)));
+		home_p2=upcase(strip(round(home_p2,.001)));
+		visitor_duration=upcase(strip(round(visitor_duration,.001)));
+		visitor_rtg=upcase(strip(round(visitor_rtg,.001)));
+		visitor_shr=upcase(strip(round(visitor_shr,.001)));
+		visitor_viewers=upcase(strip(round(visitor_viewers,.001)));
+		visitor_p2=upcase(strip(round(visitor_p2,.001)));
+		nat_home_duration=upcase(strip(round(nat_home_duration,.001)));
+		nat_home_rtg=upcase(strip(round(nat_home_rtg,.001)));
+		nat_home_shr=upcase(strip(round(nat_home_shr,.001)));
+		nat_home_viewers=upcase(strip(round(nat_home_viewers,.001)));
+		nat_home_p2=upcase(strip(round(nat_home_p2,.001)));
+		nat_vis_duration=upcase(strip(round(nat_vis_duration,.001)));
+		nat_vis_rtg=upcase(strip(round(nat_vis_rtg,.001)));
+		nat_vis_shr=upcase(strip(round(nat_vis_shr,.001)));
+		nat_vis_viewers=upcase(strip(round(nat_vis_viewers,.001)));
+		nat_vis_p2=upcase(strip(round(nat_vis_p2,.001)));
+run;
+
+****RUN COMPARE - OUTPUT DIFFERENCES IN USE.COMPARE_OBS***;
+proc compare base=use.cwa_compare compare=scg_compare out=compare_obs listobs outstats=compare_stats (where=(_TYPE_ in ("N" "MEAN" "MAX" "MIN")))   
+	outnoequal outbase outcomp outdif noprint criterion = 0.001   method = relative fuzz=0.001;
+var clean_date	attendance	visitor	visitor_score	Home	home_score		home_cum_wins	home_cum_loss	home_cum_otl	home_cum_points
+home_division	home_conference	visitor_cum_wins	visitor_cum_loss	visitor_cum_otl	visitor_cum_points	
+visitor_division	visitor_conference	TIME			GM	DAY	home_tv	home_duration	home_rating	
+home_share	home_000s	home_p2plus	visitor_tv	visitor_duration	visitor_rating	visitor_share	visitor_000s	visitor_p2plus	home_national_tv	
+nat_home_duration	nat_home_rating	nat_home_share	nat_home_000s	nat_home_p2plus	visitor_national_tv	nat_visitor_duration	nat_visitor_rating	
+nat_visitor_share	nat_visitor_000s	nat_visitor_p2plus	ot	so capacity	Special	home_population	visitor_population	home_orig_six	visitor_orig_six 
+	ln_attendance	ln_capacity ln_home_population	ln_visitor_population
+home_div_rank	home_con_rank visitor_div_rank	visitor_con_rank home_top1_div	visitor_top1_div	home_top4_con	visitor_top4_con
+mlb_home_game_count mlb_road_game_count nfl_home_game_count nfl_road_game_count visitor_mlb_game_count
+visitor_nfl_game_count nba_home_game_count nba_road_game_count visitor_nba_game_count home_moving_team visitor_moving_team nfl_inmarket mlb_inmarket nba_inmarket;
+
+with date	attendance	visitor	visitor_score	home	home_score		home_cum_wins	home_cum_loss	home_cum_ot_loss	home_cum_points
+home_division	home_conference	visitor_cum_wins	visitor_cum_loss	visitor_cum_ot_loss	visitor_cum_points	
+visitor_division	visitor_conference	time_v1			gm	day	home_tv	home_duration	home_rtg	
+home_shr	home_viewers	home_p2	visitor_tv	visitor_duration	visitor_rtg	visitor_shr	visitor_viewers	visitor_p2	home_national_tv	
+nat_home_duration	nat_home_rtg	nat_home_shr	nat_home_viewers	nat_home_p2	visitor_national_tv	nat_vis_duration	nat_vis_rtg	
+nat_vis_shr	nat_vis_viewers	nat_vis_p2 ot_one	shootout capacity	Special	home_population	visitor_population	home_six	visitor_six	
+	ln_attendance	ln_capacity	ln_home_population	ln_visitor_population
+ home_division_rank	home_conference_rank visitor_division_rank	visitor_conference_rank home_top1 visitor_top1	home_top4	visitor_top4
+mlb_home_comp mlb_away_comp  nfl_home_comp nfl_away_comp
+mlb_away_comp2 nfl_away_comp2 nba_home_comp nba_away_comp nba_away_comp2 home_moving_team	visitor_moving_team nfl_same_mkt mlb_same_mkt nba_same_mkt
+;
+	run;
+
+
