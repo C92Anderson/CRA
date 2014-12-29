@@ -1,0 +1,99 @@
+options mprint spool;
+
+libname out "F:\Competition\PBoberg17613.00-OFFICES\!2013\Analysis\Margin and Shipto Contract Analysis\CWA\out";
+libname use "F:\Competition\PBoberg17613.00-OFFICES\!2013\Analysis\Margin and Shipto Contract Analysis\CWA\use";
+libname data "F:\Competition\PBoberg18122.00-FOOD\!2013\CRA Work Product\Maps\CWA" access=readonly;
+
+
+***open base table***;
+
+filename cmds DDE "excel|system";
+    data _null_;
+	file cmds;
+	put "[open(""F:\Competition\PBoberg18122.00-FOOD\!2013\CRA Work Product\Maps\CWA\Base Table.xlsx"")]";
+    run;
+
+%macro maps(file,city,base);
+
+
+proc import datafile="F:\Competition\PBoberg18122.00-FOOD\!2013\CRA Work Product\Maps\CWA\Facility Data\&file.xls"
+	out=&file. dbms=xls replace;
+	run;
+
+data &file.;
+	set &file.;
+	if maptype in ("Sysco" "US Foodservice" "Other Broadline") then do;
+	owner="Broadline";
+	class="A";
+	end;
+	else if maptype in ("Specialty") then do;
+	class="B";
+	owner="Specialty";
+	end;
+	else if maptype="Cash and Carry / Club Stores" then do;
+	class="C";
+	owner="Cash and Carry / Club Stores";
+	run;
+
+proc sort data=&file.;
+	by class key;
+	run;
+
+****add titles***;
+filename ddeout dde"excel|&base.!r1c1:r1c1" lrecl=32767 notab; 
+
+   data _null_;
+       file ddeout dsd dlm='09'x;
+       put "Map Key: &City. Food Distributor Locations";
+    run;
+
+
+
+
+***counts***;
+
+ *data _null_;
+  *      set &co._zip_sum_&year. end = last; /* Find how many rows you need */
+   *     if last then do;
+	*        call symput("camax",strip(put(sum(_n_,8),8.))); /* Accounting for starting on 9th row, last row of formatted data */
+     *       call symput("del",strip(put(sum(_n_,9),8.)));
+      *      end;
+  *  run;
+
+filename ddeout dde"excel|&base.!r8c2:r99c8" lrecl=32767 notab;
+
+data _null_;
+    set &file.;
+ 	by key maptype;
+	file ddeout dsd dlm='09'x;
+	if first.class  then do;
+        put '09'x;
+		put owner;
+		put '09'x;
+        put cleanname key FacilityLocation FacilityCity FacilityState	FacilityZip;
+        end;
+    else put cleanname key FacilityLocation FacilityCity FacilityState	FacilityZip;
+run;
+
+data _null_;
+        file cmds;
+        Put "[workbook.activate(""&base."")]"; 
+     *   put "[SELECT(""R&del:R78"")]"; /* highlighting rows to delete */
+     *   put '[EDIT.DELETE(2)]'; 
+        put "[SELECT(""R1C1"")]";
+    run;
+
+        data _null_;
+	rc=sleep(2);
+	run;
+
+%mend maps;
+%maps(Alaska,Alaska,base);
+
+
+
+data _null_;
+	file cmds;
+	put "[save.as(""F:\Competition\PBoberg18122.00-FOOD\!2013\CRA Work Product\Maps\CWA\Map Keys.xlsx"")]"; /* save as new filename */
+        put "[close()]";
+	run;
