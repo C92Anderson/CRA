@@ -1,0 +1,286 @@
+global path "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use\"
+global out "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use\stata visuals\"
+set more off
+
+log using "${path}plant_regressions_v3.log", replace
+
+use "${path}regression_ds.dta", clear
+
+keep if price > 10
+keep if price < 1000000
+
+gen post_newark_100=0
+gen post_newark_250=0 
+gen post_newark_500=0
+gen post_newark_750=0
+gen post_newark_1000=0
+
+
+replace ship_dist=ship_dist/100
+replace closest_comp_dist=closest_comp_dist/100
+replace post_closest_comp_dist=post_closest_comp_dist/100
+
+replace newark_dist=newark_dist/100
+replace sonoco_dist=sonoco_dist/100
+replace gp_dist=gp_dist/100
+replace paper_pacific_dist=paper_pacific_dist/100
+replace summer_industries_dist=summer_industries_dist/100
+
+gen  inv_ship_dist=1/ship_dist
+gen  inv_closest_comp_dist=1/closest_comp_dist
+gen  post_inv_closest_comp_dist=1/post_closest_comp_dist
+
+local miles "50 100 500"
+
+****Model 1: Ship Distance
+
+xi: areg ln_price ln_tons ship_dist inv_ship_dist i.per i.plantnme i.shpvia, absorb(product_id)
+outreg2 using "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out\plant_regressions_v3.xls", excel replace
+
+foreach mi of local miles {
+gen mfx1_`mi' = _b[ship_dist]-(_b[inv_ship_dist]*(`mi'^(-2)))
+}
+****Model 2: Ship Distance, Distance to Closest Competitor
+
+local model2vars "closest_comp_dist inv_closest_comp_dist"
+
+xi: areg ln_price ln_tons ship_dist inv_ship_dist `model2vars' i.per i.plantnme i.shpvia, absorb(product_id) 
+outreg2 using "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out\plant_regressions_v3.xls", excel append
+
+foreach mi of local miles {
+gen mfx2_`mi' = _b[ship_dist]-(_b[inv_ship_dist]*(`mi'^(-2)))
+}
+
+foreach mi of local miles {
+gen mfx2_comp_`mi' = _b[closest_comp_dist]-(_b[inv_closest_comp_dist]*(`mi'^(-2)))
+}
+
+predict phat2, xb
+
+foreach var of local model2vars {
+
+ren `var' old_`var'
+gen `var' = post_`var'
+}
+
+predict phat_post2, xb
+
+gen pchg2=exp(phat2)-exp(phat_post2)
+gen pctchg2=pchg2/exp(phat2)
+
+foreach var of local model2vars {
+
+drop `var'
+ren old_`var' `var'
+}
+
+****Model 3: Ship Distance, Competitor Count
+
+
+local model3vars "comp_count_100 comp_count_250 comp_count_500 comp_count_750 comp_count_1000"
+
+xi: areg ln_price ln_tons ship_dist inv_ship_dist `model3vars' i.per i.plantnme i.shpvia, absorb(product_id)
+outreg2 using "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out\plant_regressions_v3.xls", excel append
+
+foreach mi of local miles {
+gen mfx3_`mi' = _b[ship_dist]-(_b[inv_ship_dist]*(`mi'^(-2)))
+}
+
+predict phat3, xb
+
+foreach var of local model3vars {
+
+ren `var' old_`var'
+gen `var' = post_`var'
+}
+
+predict phat_post3, xb
+
+gen pchg3=exp(phat3)-exp(phat_post3)
+gen pctchg3=pchg3/exp(phat3)
+
+foreach var of local model3vars {
+
+drop `var'
+ren old_`var' `var'
+}
+
+****Model 4: Ship Distance, Competitor Count, Low Competitor Indicators
+
+
+
+local model4vars "comp_count_100 comp_count_250 comp_count_500 comp_count_750 comp_count_1000 zero_comp_100 one_comp_100 two_comp_100 zero_comp_250 one_comp_250 two_comp_250 zero_comp_500 one_comp_500 two_comp_500 zero_comp_750 one_comp_750 two_comp_750 zero_comp_1000 one_comp_1000 two_comp_1000"
+
+xi: areg ln_price ln_tons ship_dist inv_ship_dist `model4vars' i.per i.plantnme i.shpvia, absorb(product_id)
+outreg2 using "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out\plant_regressions_v3.xls", excel append
+
+foreach mi of local miles {
+gen mfx4_`mi' = _b[ship_dist]-(_b[inv_ship_dist]*(`mi'^(-2)))
+}
+
+predict phat4, xb
+
+foreach var of local model4vars {
+
+ren `var' old_`var'
+gen `var' = post_`var'
+}
+
+predict phat_post4, xb
+
+gen pchg4=exp(phat4)-exp(phat_post4)
+gen pctchg4=pchg4/exp(phat4)
+
+foreach var of local model4vars {
+
+drop `var'
+ren old_`var' `var'
+}
+
+****Model 5: Ship Distance, Closest Competitor, Competitor Count
+
+
+
+local model5vars "closest_comp_dist inv_closest_comp_dist comp_count_100 comp_count_250 comp_count_500 comp_count_750 comp_count_1000"
+
+xi: areg ln_price ln_tons ship_dist inv_ship_dist `model5vars' i.per i.plantnme i.shpvia, absorb(product_id)
+outreg2 using "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out\plant_regressions_v3.xls", excel append
+
+foreach mi of local miles {
+gen mfx5_`mi' = _b[ship_dist]-(_b[inv_ship_dist]*(`mi'^(-2)))
+}
+foreach mi of local miles {
+gen mfx5_comp_`mi' = _b[closest_comp_dist]-(_b[inv_closest_comp_dist]*(`mi'^(-2)))
+}
+
+predict phat5, xb
+
+foreach var of local model5vars {
+
+ren `var' old_`var'
+gen `var' = post_`var'
+}
+
+predict phat_post5, xb
+
+gen pchg5=exp(phat5)-exp(phat_post5)
+gen pctchg5=pchg5/exp(phat5)
+
+foreach var of local model5vars {
+
+drop `var'
+ren old_`var' `var'
+}
+
+****Model 6: Ship Distance, Closest Competitor, Competitor Count, with Low Competitor Indicators
+
+
+
+local model6vars "closest_comp_dist inv_closest_comp_dist comp_count_100 comp_count_250 comp_count_500 comp_count_750 comp_count_1000 zero_comp_100 one_comp_100 two_comp_100 zero_comp_250 one_comp_250 two_comp_250 zero_comp_500 one_comp_500 two_comp_500 zero_comp_750 one_comp_750 two_comp_750 zero_comp_1000 one_comp_1000 two_comp_1000"
+
+xi: areg ln_price ln_tons ship_dist inv_ship_dist `model6vars' i.per i.plantnme i.shpvia, absorb(product_id)
+outreg2 using "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out\plant_regressions_v3.xls", excel append
+
+foreach mi of local miles {
+gen mfx6_`mi' = _b[ship_dist]-(_b[inv_ship_dist]*(`mi'^(-2)))
+}
+foreach mi of local miles {
+gen mfx6_comp_`mi' = _b[closest_comp_dist]-(_b[inv_closest_comp_dist]*(`mi'^(-2)))
+}
+
+predict phat6, xb
+
+foreach var of local model6vars {
+
+ren `var' old_`var'
+gen `var' = post_`var' 
+}
+
+predict phat_post6, xb
+
+gen pchg6=exp(phat6)-exp(phat_post6)
+gen pctchg6=pchg6/exp(phat6)
+
+foreach var of local model6vars {
+
+drop `var'
+ren old_`var' `var'
+}
+****Model 7: Ship Distance, Closest Major Competitors
+
+local newark_rings "newark_100 newark_250 newark_500 newark_750 newark_1000"
+
+local competitor_dist "newark_100 newark_250 newark_500 newark_750 newark_1000 sonoco_100 sonoco_250 sonoco_500 sonoco_750 sonoco_1000 gp_100 gp_250 gp_500 gp_750 gp_1000 paper_pacific_100 paper_pacific_250 paper_pacific_500 paper_pacific_750 paper_pacific_1000 summer_industries_100 summer_industries_250 summer_industries_500 summer_industries_750 summer_industries_1000 "
+
+xi: areg ln_price ln_tons ship_dist inv_ship_dist `competitor_dist' i.per i.plantnme i.shpvia, absorb(product_id)
+outreg2 using "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out\plant_regressions_v3.xls", excel append
+
+foreach mi of local miles {
+gen mfx7_`mi' = _b[ship_dist]-(_b[inv_ship_dist]*(`mi'^(-2)))
+}
+
+predict phat7, xb
+
+foreach var of local newark_rings {
+
+ren `var' old_`var'
+gen `var' = post_`var' 
+}
+predict phat_post7, xb
+
+gen pchg7=exp(phat7)-exp(phat_post7)
+gen pctchg7=pchg7/exp(phat7)
+
+foreach var of local newark_rings {
+
+drop `var'
+ren old_`var' `var'
+}
+****Model 8: Ship Distance, Competitor Count,  Closest Major Competitors
+
+
+
+xi: areg ln_price ln_tons ship_dist inv_ship_dist  `model5vars' `competitor_dist' i.per i.plantnme i.shpvia, absorb(product_id)
+outreg2 using "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out\plant_regressions_v3.xls", excel append
+
+foreach mi of local miles {
+gen mfx8_`mi' = _b[ship_dist]-(_b[inv_ship_dist]*(`mi'^(-2)))
+}
+foreach mi of local miles {
+gen mfx8_comp_`mi' = _b[closest_comp_dist]-(_b[inv_closest_comp_dist]*(`mi'^(-2)))
+}
+
+predict phat8, xb
+
+foreach var of local newark_rings {
+
+ren `var' old_`var'
+gen `var' = post_`var' 
+}
+
+foreach var of local model5vars {
+
+ren `var' old_`var'
+gen `var' = post_`var'
+}
+
+predict phat_post8, xb
+
+gen pchg8=exp(phat8)-exp(phat_post8)
+gen pctchg8=pchg8/exp(phat8)
+
+foreach var of local newark_rings {
+
+drop `var'
+ren old_`var' `var'
+}
+
+foreach var of local model5vars {
+
+drop `var'
+ren old_`var' `var'
+}
+
+saveold "${path}regression_pctchg.dta", replace
+
+log close
