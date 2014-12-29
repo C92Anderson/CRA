@@ -1,0 +1,268 @@
+libname folder "F:\Competition\folder";
+proc datasets library=use;
+  run;
+MACRO
+
+%macro macro(macro1,macro2);
+		data numbers_&macro1.;
+			set folder.data_&macro1.;
+			SUM = sum(VAR_&MACRO2.);  run;
+ %mend macro;
+ %macro(ds1,var1);
+ %macro(ds2,var1);
+IMPORT TEXT FILE
+
+data folder.data_&macro1. (keep/drop = VAR1 VAR2 VAR3 XX:);
+  	infile ignoreDOSEOF "F:\Competition\folder\file_&macro1..txt" 
+  	delimiter = '|' MISSOVER DSD lrecl=32767 firstobs=2;
+  	length detail_fname $50. mill $50.;
+				informat VARNAME1 $50. ;                                           
+				informat VARDATE DATE10. ;                           
+				informat VARQUANTITY best32. ;                  
+
+				format VARNAME1 $50. ;                                                            				format VARDATE DATE10. ;                          
+				format VARQUANTITY best32. ;
+input    	PLANT_CODE $     	(character)                                                                                         
+         	PRODUCED_DATE                                             
+		TONS_PRODUCED  ;run; (number) 
+	
+data dataset;
+	infile "lib/file.csv"  dlm = ' , '  missover  dsd firstobs=2 obs=# lrecl=1200;
+	informat var1 $11. var2 $8. var3 mmddyy10. var4 best12.;
+	format var1 $11. var2 $8. var3 mmddyy10. var4 best12.;
+		input @;
+		_infile_=compress(_infile_,"$");
+	input var1 $ var2 $ var3 var4;run;
+
+IMPORT EXCEL
+
+proc import datafile = "F:\Competition\folder\file_&macro1..txt"
+			out = folder.file
+			dbms = xls
+			replace;
+			sheet = "sheet_&macro2.";
+			namerow = # ;			 (variable names)
+			datarow = # ;		 (firstobs)
+			startcol = A ;		(variables)
+			endcol = B ; run;
+
+DATE AS CHARACTER/IF-THEN/VARIABLES
+
+data work.newdata_&macro. ;
+			set name.data_&macro. (keep/drop = VAR1 VAR2 VAR3 XX:) ;
+		tempmonth = substr(VARDATE,startposition,length)*1; (numeric)
+		tempyear = substr(VARDATE,1,4)*1;
+		yrmo = mdy(tempmonth,15,tempyear);	   (sas date format)
+		IF variableargument THEN NEWVAR = OBSERVATION1 ;
+		ELSE IF varargument2 THEN NEWVAR = OBSERVATION2 ;
+		ELSE IF varargument3 THEN NEWVAR2 = VAR ;  (var will return ##)
+		ELSE IF varargument4 THEN NEWVAR2 = 'VAR'; ('var' will return text)
+		ELSE IF var5 = ‘xxx’ THEN OUTPUT newdataset (output to new dataset)
+		ELSE IF var6 = "oldname" then var1 = "newname"; (rename obs)
+	 	ELSE finalaction (delete);
+	
+PROC MEANS
+(sum/stddev/range/nmiss/n/mode/median/mean/min/max obs across variables)
+
+proc means data = ____ nway noprint ;
+		where date < ‘16mar02’d;
+		class VAR1 VAR2 /missing;	(these are the 'analyzed' variables/obs)
+		var VAR3 VAR4 ;	(sum/average in that column for each 'by' variable)
+		output out = folder.means 	(drop=_:) sum(VAR3) = sumvar3 mean(VAR4) =
+
+PROC TRANSPOSE
+
+proc transpose data = ____ OUT = folder.____ (drop=);
+	by NAMEVAR1 NAMEVAR2 ;		(keep these variables)
+	id VARBROKENUP ;     	(unique observations will turn into new variables)
+	var OLDVAR1 OLDVAR2 ; run;		(these variables will become observations)
+
+MERGE (sort first ‘by’ variable first)
+
+data combods ;
+	merge dset1 (in=a) dset2 (in=b) ;
+	by VARSHARED; 
+	if a;					(includes only dset1)
+	if b then output NEWDS;		(subset data)
+		else output OTHERDSET;	(subset data)
+*create % of total through proc means (sum of obs), merge sum with obs, then var% 
+*or stack datasets by naming multiple sets
+
+PROC CORR
+
+proc corr data = dataset1 out = ____;
+	var YVAR;
+	with XVAR1 XVAR2 XVAR3; (or var1-var10) run;
+
+EXPORT TO EXCEL/STATA
+
+proc export data = folder.name
+            outfile = "Filepath\Filename.xlsx"
+            dbms = excel 
+            replace;
+            sheet = "NAME";   run;
+DATASET OPTIONS
+
+keep, drop, rename = (oldvar = newvar old2 = new2), firstobs = n, obs = n, label 
+
+IN/WHERE (selects observations)
+
+IF for Data Steps = Where for Procs
+	Data newds (WHERE = VAR1 (CONTAINS (‘word’)));		
+IN is a temporary variable
+
+LAG
+data folder.laggedcalc;
+	set folder.ds;
+changeeachperiod = ((sum((&ds.),lag1(&ds.))) - (sum(lag2(&ds.), lag3(&ds.))) / (sum(lag2(&ds.), lag3(&ds.))); 
+	run;    (lag’how many observation back’(variable))
+
+NODUPKEY
+proc sort data = use._1 (keep = competitor_1) out = use.comp1 nodupkey;
+               By competitor_1;        (create new ds w/ only competitor var)
+		Where var=” “; Run;
+
+SCAN/SUBSTR/INDEX
+new_var = Scan(old_var,1/-1,"delimiter");     (+ searches L to R/- R to L, 
+							# marks which ‘block to pull)
+New_Var  = substr(oldvar,startpostion,length);
+
+Startposition# = INDEX(var,’character’);
+if index(trim(upcase(var)),"STRING")> 0 then __;	(start position of character/ #, combine with substr)
+Startposition# = ANYDIGIT(var,start);
+Startposition# = ANYALPHA(var,start);		
+
+(p.82) STRIP UPCASE LENGTH CATX ANYSPACE
+
+INPUT/PUT (char to num)
+	
+sas_date=input(date_char, date10.);
+value=input(charvalue,best32.);
+char=put(value,$6.);
+length zip $5.; (above set, generally multiples of 8)
+intnx						RANK
+
+data a ; set b;
+	by var1 var2;
+	if first.var1 then rank=1;
+		else rank+1; run; 
+WEIGHTED UNIVARIATE
+
+proc univariate noprint pctldef=3 data = data.ynhh_hsr_inpat_comm;
+	by hsr msdrg;
+	var SumPaymentsAmt LOS;
+   	output out= outliers_hosp_drg pctlpts  = 1 99
+       	pctlpre  = hosp_drg_paidamt_ hosp_drg_los_
+        pctlname = pct1 pct99;run;
+PROC REG
+
+proc reg data=out.ssi_regression ;
+	ssi1: model l_gross_sales = l_dist;
+	ssi2: model l_oper_income_sales = l_dist;
+	ods output ParameterEstimates=out.vsi_parms; run;
+
+proc glm data =use.ssi_dummies;
+   class store_ag yrmo;
+   model l_adj_sales = store_ag yrmo / solution; 
+            run;
+DELETE TEMP DATASET
+proc datasets library=work;
+	delete one_temp;
+	quit;
+‘SET’/APPEND DATASETS
+
+proc append base = data.med_surg 
+data = data.&file.; run;
+SELECT/WHEN
+data big;  set big;
+	select (year(date));
+		when (2003) interest=amount*.33;
+		when (2004) interest=amount*.21;
+		otherwise interest=amount*.10;
+	end; run;
+SAMPLE RANDOM
+proc surveyselect data = data.dataset
+	Method = SRS n = 50000 (OR SAMPRATE=0.05)
+	out = data.sample;run;
+PROC COMPARE
+
+proc compare data= data.data1 compare= data.data2
+	method=absolute criterion=.00001 listequalvar MAXPRINT=(30,1000);
+	var data1 vars;
+	with data2 vars; run;
+
+RETAIN
+data big;
+	retain startdate '16mar02'd;
+	set big;
+	if date < startdate then;
+	drop startdate;run;
+	if plant ne " " then plant2=plant;
+	retain plant2;
+
+PROC SQL
+proc sql;
+	create table joined as			(proc sql as a merge)
+	select *
+	from big as B left join small as S
+	on B.date = S.date;
+	quit;
+
+on (S.range_low <= B.value and B.value <= S.range_hi and S.year = B.year and S.qtr = B.qtr); as a range merge
+
+proc sql;
+	create table small as
+	select b.*
+	from big as b
+	where b. date in(select distinct date from date);
+quit;   
+
+proc sql;
+	create table zip3_lats as
+	select zip3, mean(lat) as average_lat, mean(lon) as average_lon
+	from zip3_find
+	group by zip3;
+	quit;
+
+PROC SQL options;
+SELECT column(s) (* means all columns)
+FROM dataset1, dataset2
+WHERE expression— b.joinvar in( ) WHERE companyname LIKE 'A%'
+GROUP BY column(s)
+HAVING expression
+ORDER BY column(s)
+UPDATE table
+SET Address='Nissestien 67', City='Sandnes'
+WHERE LastName='Tjessem' AND FirstName='Jakob';
+QUIT;
+MANUAL DATAENTRY
+data manual;
+	input fips $ latitude  longitude ;
+	datalines;
+	08014 39.953382 -105.052125
+	08312 23.432342 -106.432442
+;run;
+
+
+DO LOOP
+  do j=1 to length(complist);
+    if substr(complist,j,1)="," then count=count+1;
+	end;
+  temp=complist;
+  do k=1 to count+1;
+    if k le count then do;
+      comp=substr(temp,1,index(temp,",")-1);
+      output;
+	   temp=substr(temp,index(temp,",")+1);
+	  end;
+	 else do;
+	   comp=temp;
+		output;
+	  end;
+	end;
+  run;
+	
+STANDARDIZE NUMERIC VARIABLES
+proc stdize data=use.sales_rhs reponly MISSING=0 out=use.sales_rhs;
+var _numeric_;
+run;
