@@ -1,0 +1,444 @@
+libname use "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use";
+libname out "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out";
+libname data "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\data";
+libname comp "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use\compare";
+libname raw "\\bosproject\Proj\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\Caraustar Plant Sales Data\Raw Data (2014-09-04)";
+
+*****************************VINCENTY*****************************;
+****use exploded dataset created in v5****;
+/*
+proc import datafile="F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use\relevant_area_explode_4sas_v2.dta"
+	out=relevant_area_explode_4sas dbms=dta replace;
+	run;
+
+data relevant_area_explode;
+	set relevant_area_explode_4sas;
+	if dist=. & (comp_lat=cust_lat) & (comp_lon=cust_lon) then dist=0;
+	else if dist=. then delete;
+	if source_dist=. & (abs(comp_lat-source_lat) <0.001 ) & (abs(comp_lon-source_lon)<0.001) then source_dist=0;
+	else if source_dist=. then delete;
+	if upcase(address)="FREEPORT BAHAMAS,  84127 USA" then country="International";
+	if upcase(strip(endusdsc)) in ("ADHESIVE" "MISCELLANEOUS NON-TUBE PRODUCTS" "LAYFLAT TUBING" "PLUGS" "ROLL HEADERS" "END CAPS") then delete;
+ run;
+
+proc sort data=relevant_area_explode;
+	by plantnme customer_name internal_v2 resale CATDESC PRDMDRL WALLS LNGTH PAPERDES COLRNBR endusdsc year address dist comp_city;
+	run;
+*/
+data use.relevant_area_closest_spec3;
+	set relevant_area_explode;
+	by plantnme customer_name internal_v2 resale CATDESC PRDMDRL WALLS LNGTH PAPERDES COLRNBR endusdsc year address dist comp_city;
+	if first.address then closest_dist=1;
+	else closest_dist=0;
+	if country in ("USA" "Canada") then us_can=1;
+	else us_can=0;
+	if plantnme="WINNIPEG" then manu_inside_all=0;
+	else manu_inside_all=1;
+	if plantnme in ("SALT LAKE" "AURORA") then source_radius=500;
+		else source_radius=300;
+	if dist < radius then relevant_area=1;
+	else relevant_area=0;
+	if source_dist < radius then manu_inside_plant=1;
+	else manu_inside_plant=0;
+	if us_can=0 then relevant_area=0;
+	volume=volume/2000;
+
+***spec specific columns***;
+
+	_3a_column="plantnme";
+	if source_dist > source_radius then _3c_column="plantnme";
+	if source_dist < source_radius then _3b_column="plantnme";
+
+***fix product identifiers****;
+wall_change=0;
+dia_change=0;
+len_change=0;
+
+	if CATDESC in ("KONVA KORE TUBE" "CONVOLUTE TUBE" "FURNITURE CORE") & (walls ne 0) then do; walls2=0; replace_count=1; wall_change=1; end;
+	if CATDESC in ("FURNITURE CORE") & (PRDMDRL ne 0) then do; PRDMDRL2=0; replace_count=1; dia_change=1; end;
+
+	prod_replace=catx("-",CATDESC,PAPERDES,PRDMDRL,WALLS,LNGTH,COLRNBR);
+	prod_replace_walls=catx("-",CATDESC,PAPERDES,PRDMDRL,LNGTH,COLRNBR);
+	prod_replace_dia=catx("-",CATDESC,PAPERDES,WALLS,LNGTH,COLRNBR);
+
+
+
+***walls***;
+if prod_replace='SPIRAL TUBE-ULTRA 100-1.007-0-10-0' then do; WALLS2=0.05; replace_count=2; wall_change=1; end;
+if prod_replace='SPIRAL TUBE-ULTREX-1.63-0-21.102-0' then do; WALLS2=0.06; replace_count=2; wall_change=1; end;
+if prod_replace='YARN CARRIER TUBE-ULTRA 100-2.875-100-11.5-0' then do; WALLS2=0.1; replace_count=2; wall_change=1; end;
+if prod_replace='YARN CARRIER TUBE-ULTRA 200-2.875-100-11.5-0' then do; WALLS2=0.1; replace_count=2; wall_change=1; end;
+if prod_replace='YARN CARRIER TUBE-ULTRA 100-2.878-1.13-11.437-0' then do; WALLS2=0.113; replace_count=2; wall_change=1; end;
+if prod_replace='YARN CARRIER TUBE-ULTRA 200-2.888-100-11.5-0' then do; WALLS2=0.1; replace_count=2; wall_change=1; end;
+if prod_replace='SPIRAL TUBE-ULTRA 200-3-0-1-0' then do; WALLS2=0.6; replace_count=2; wall_change=1; end;
+if prod_replace='SPIRAL TUBE-ULTRA 200-4-0-1-0' then do; WALLS2=0.4; replace_count=2; wall_change=1; end;
+if prod_replace='SPIRAL TUBE-ULTRA 200-6-0-1-0' then do; WALLS2=0.47; replace_count=2; wall_change=1; end;
+if prod_replace='SPIRAL TUBE-ULTRA 100-6-0-30-0' then do; WALLS2=0.15; replace_count=2; wall_change=1; end;
+if prod_replace='SPIRAL TUBE-ULTREX-6.028-0-1-0' then do; WALLS2=0.5; replace_count=2; wall_change=1; end;
+if prod_replace='SPIRAL TUBE-ULTRA 200-8-0-1-0' then do; WALLS2=0.375; replace_count=2; wall_change=1; end;
+if prod_replace='SPIRAL TUBE-ULTRA 200-10-0-1-0' then do; WALLS2=0.375; replace_count=2; wall_change=1; end;
+if prod_replace='SPIRAL TUBE-ULTRA 200-12-0-1-0' then do; WALLS2=0.4; replace_count=2; wall_change=1; end;
+if prod_replace='SPIRAL TUBE-ULTRA 100-16.75-0-240-0' then do; WALLS2=0.245; replace_count=2; wall_change=1; end;
+if prod_replace='SPIRAL TUBE-ULTRA 100-18.04-0-23.875-0' then do; WALLS2=0.215; replace_count=2; wall_change=1; end;
+if prod_replace='SPIRAL TUBE-ULTRA 100-18.75-2-144-0' then do; WALLS2=0.2; replace_count=2; wall_change=1; end;
+
+
+***diameter***;
+if prod_replace_dia='SPIRAL TUBE-ULTREX-0.5-162-0' then do; PRDMDRL2=3; replace_count=3; dia_change=1; end;
+
+
+if prod_replace_walls='KONVA KORE TUBE-ULTRA 100-4-0.42-0' then do; LNGTH2=42; replace_count=4; len_change=1; end;
+
+CATDESC2=CATDESC;
+PAPERDES2=PAPERDES;
+COLRNBR2=COLRNBR;
+if PRDMDRL2=. then PRDMDRL2=PRDMDRL;
+if WALLS2=. then WALLS2=WALLS;
+if LNGTH2=. then LNGTH2=LNGTH;
+	run;
+
+***create variable fix crosswalk***;
+
+proc means data=use.relevant_area_closest_spec3 nway noprint;
+	where replace_count>0;
+	class replace_count CATDESC PAPERDES PRDMDRL  WALLS  LNGTH  COLRNBR PRDMDRL2 WALLS2 LNGTH2 COLRNBR2 wall_change dia_change len_change /missing;
+	var sales;
+	output out=use.replace_variables_xwalk (drop=_:) n(sales)=count;
+	run;
+data _null_;
+	set  use.replace_variables_xwalk;
+	file "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out\replace_variables_xwalk.xls" delimiter = '09'x lrecl = 32767;
+	put CATDESC PAPERDES PRDMDRL  WALLS  LNGTH  COLRNBR '09'x PRDMDRL2 WALLS2 LNGTH2 COLRNBR2 wall_change dia_change len_change ;
+	run;	
+
+/*
+
+
+proc sort data=use.relevant_area_closest_spec3 (keep=comp_city plantnme source_dist source_radius) nodupkey out=plant_area;
+	where source_dist > source_radius;
+	by comp_city plantnme source_dist;
+	run;
+
+********************************ANALYSIS *********************;
+
+	****Relevant Area (A)****;
+
+%macro partA(condition,part,book); 
+
+		%macro year(yr);
+
+proc means data=use.relevant_area_closest_spec3 nway noprint;
+	&condition. & year=&yr. & closest_dist=1;
+	class CATDESC PAPERDES PRDMDRL WALLS LNGTH COLRNBR /missing;
+	var sales volume;
+	output out=&part._&yr. (drop=_:) sum(sales)=sales_&yr. sum(volume)=volume_&yr.;
+	run;
+		%mend year;
+		%year(2011);
+		%year(2012);
+		%year(2013);
+		%year(2014);
+
+data comp.&part.;
+	merge &part._2011 &part._2012 &part._2013 &part._2014;
+	by CATDESC PAPERDES PRDMDRL WALLS LNGTH COLRNBR ;
+	run;
+
+***open workbook in macro****;
+
+	filename cmds DDE "excel|system";
+    data _null_;
+	file cmds;
+	put "[open(""\\bosproject\Proj\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\data\Base Tables\Base Table - Caraustar's Response to Spec 3(&book.) - Plants.xlsx"")]";
+    run;
+
+data _null_;
+      set comp.&part. end = last; * Find how many rows you need *;
+     if last then do;
+        call symput("camax",strip(put(sum(_n_,8),8.))); * Accounting for starting on 9th row, last row of formatted data *;
+         call symput("del",strip(put(sum(_n_,9),8.)));
+        end;
+   run;
+
+filename ddeout dde"excel|A - US & Canada!r9c1:r24212c15" lrecl=32767 notab;
+
+data _null_;
+    set comp.&part.;
+	file ddeout dsd dlm='09'x;
+	put CATDESC PAPERDES PRDMDRL WALLS LNGTH COLRNBR '09'x sales_2011 volume_2011 sales_2012 volume_2012 sales_2013 volume_2013 sales_2014 volume_2014;
+run;
+
+data _null_;
+        file cmds;
+        Put "[workbook.activate(""A - US & Canada"")]"; 
+        put "[SELECT(""R&del:R24212"")]"; * highlighting rows to delete *;
+        put '[EDIT.DELETE(2)]'; 
+        put "[SELECT(""R1C1"")]";
+    run;
+
+data _null_;
+	file cmds;
+	put "[save.as(""\\bosproject\Proj\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\data\Base Tables\Int Table - Caraustar's Response to Spec 3(&book.) - Plants.xlsx"")]";
+        put "[close()]";
+	run;
+
+data _null_;
+	rc=sleep(2);run;
+
+%mend partA;
+*%partA(where us_can=1 & internal=0,part1a,a);
+*%partA(where us_can=1 & internal=0,part1b,b);
+*%partA(where us_can=1 & manu_inside=3 & internal=0,part1c,c);
+%partA(where us_can=1 & internal_v2=1,part1d,d);
+*%partA(where us_can=1 & resale=1,part1e,e);
+
+
+********************************RELEVANT AREA B***;
+
+****for each source we are drawing a radius to find sales that overlap with other plants**;
+
+proc sort data=use.relevant_area_closest_spec3 (keep=plantnme) nodupkey out=plant_brace;
+	by plantnme;run;
+
+%macro partB(condition,part,book); 
+
+			%macro year(yr);
+
+				proc means data=use.relevant_area_closest_spec3 nway noprint;
+					&condition. & year=&yr. & competitor in ("Caraustar" "Newark Group");
+					class comp_city plantnme CATDESC PAPERDES PRDMDRL WALLS LNGTH COLRNBR  /missing;
+					var sales volume;
+					output out=&part._&yr. (drop=_:) sum(sales)=sales_&yr. sum(volume)=volume_&yr.;
+					run;
+			%mend year;
+			%year(2011);
+			%year(2012);
+			%year(2013);
+			%year(2014);
+
+**open workbook in macro****;
+
+	filename cmds DDE "excel|system";
+   data _null_;
+	file cmds;
+	put "[open(""\\bosproject\Proj\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\data\Base Tables\Int Table - Caraustar's Response to Spec 3(&book.) - Plants.xlsx"")]";
+    run;
+
+	*****merge together separately named year calculations****;
+
+%macro sheet(nm,prpr,sh,mi,company);
+
+	data &part._&sh.;
+			merge &part._2011 &part._2012 &part._2013 &part._2014;
+			by comp_city plantnme CATDESC PAPERDES PRDMDRL WALLS LNGTH COLRNBR ;
+		
+			****limit to just populated columns***;
+
+			if upcase(strip(comp_city))="&nm.";
+
+				run;
+
+****create cheat sheet for columns***;
+
+proc sort data=&part._&sh. (keep=comp_city plantnme) nodupkey out=superheader;
+	by plantnme comp_city plantnme;
+	run;
+
+data superheader (drop=plantnme comp_city);
+	format tab_name;
+	merge superheader (in=a)  plant_brace (in=b);
+	by plantnme;
+	if a & b then included_sh=plantnme;
+	if b & not a then excluded_sh=plantnme;
+	tab_name="&sh.";
+	run;
+
+proc append base=use.superheader_list_&part.
+	data=superheader force;run;
+
+proc means data=&part._&sh. nway noprint;
+	class comp_city plantnme CATDESC PAPERDES PRDMDRL WALLS LNGTH COLRNBR  /missing;
+	var sales_2011: volume_2011: sales_2012: volume_2012: sales_2013: volume_2013: sales_2014: volume_2014:;
+	output out=&part._&sh. max=;
+	run;
+
+proc transpose data=&part._&sh. out=trans_&part._&sh.;
+by comp_city plantnme CATDESC PAPERDES PRDMDRL WALLS LNGTH COLRNBR ;
+var sale: volume:;
+run;
+
+data trans_&part._&sh.;
+	set trans_&part._&sh.;
+	spec_code="&part.";
+	format header $50.;
+	header=strip(upcase(_name_))||"_"||upcase(strip(plantnme));
+	format name $40.;
+	name="&sh.";
+	if substr(upcase(_name_),1,4)="SALE" then do;
+	year=substr(_name_,7,4);
+	class="sales";
+	end;
+	if substr(upcase(_name_),1,4)="VOLU" then do;
+	year=substr(_name_,8,4);
+	class="volume";
+	end;
+	run;
+
+
+proc sort data=trans_&part._&sh.; 
+	by comp_city    CATDESC PAPERDES PRDMDRL WALLS LNGTH COLRNBR plantnme year  class   ; run;
+
+proc transpose data=trans_&part._&sh. out=comp.&part._&sh. ;
+	by comp_city     CATDESC PAPERDES PRDMDRL WALLS LNGTH COLRNBR plantnme year  class   ;
+id header;
+var col1;
+run;
+
+proc means data=comp.&part._&sh. nway noprint;
+	class CATDESC PAPERDES PRDMDRL WALLS LNGTH COLRNBR /missing;
+	var sales: vol:;
+	output out=comp.&part._&sh. (drop=_:) max=;
+	run;
+
+data &part._&sh._paste;
+	set	comp.&part._&sh.;
+
+%macro plant(pl);
+
+	%macro yr(yr);
+
+		%macro var(var);
+		
+		if anydigit(&var._&yr._&pl.)>0 then &var._&yr._&pl.2=&var._&yr._&pl.;
+		else &var._&yr._&pl.2="";
+		drop &var._&yr._&pl.;
+		rename &var._&yr._&pl.2=&var._&yr._&pl.;
+
+		%mend var;
+		%var(sales);
+		%var(volume);
+
+	%mend yr;
+	%yr(2011);
+	%yr(2012);
+	%yr(2013);
+	%yr(2014);
+%mend plant;
+%plant(AUSTELL);
+%plant(ARLINGTON);
+%plant(ASHEVILLE);
+%plant(AUGUSTA);
+%plant(BEARDSTOWN);
+%plant(CANTONMENT);
+%plant(CORINTH);
+%plant(CROSSETT);
+%plant(DALTON);
+%plant(FRANKLIN);
+%plant(KERNERSVILLE);
+%plant(KINGSTON);
+%plant(LANCASTER);
+%plant(LELAND);
+%plant(MINERVA);
+%plant(PALATKA);
+%plant(PHOENIX);
+%plant(ROCK_HILL);
+%plant(ROGERSVILLE);
+%plant(SAGINAW);
+%plant(SALT_LAKE);
+%plant(SILSBEE);
+%plant(TACOMA);
+%plant(TAYLORS);
+%plant(TEXARKANA);
+%plant(TOLEDO);
+%plant(TORONTO);
+%plant(WEST_MONROE);
+%plant(WEYERS_CAVE);
+%plant(WINNIPEG);
+
+array null {30} null1-null30;
+do i = 1 to 30 ;
+null{i}="";
+end;
+run;
+
+****macro takes each individual plant, counts row length, and pastes it***;
+
+****add titles***;
+filename ddeout dde"excel|&sh.!r3c1:r3c1" lrecl=32767 notab; 
+
+   data _null_;
+       file ddeout dsd dlm='09'x;
+       put "Relevant Area B: &mi.-mile radius around &company.'s &prpr. plant";
+    run;
+
+data _null_;
+      set &part._&sh._paste end = last ; * Find how many rows you need *;
+     if last then do;
+        call symput("camax",strip(put(sum(_n_,9),8.))); * Accounting for starting on 9th row, last row of formatted data *;
+         call symput("del",strip(put(sum(_n_,10),8.)));
+        end;
+   run;
+
+filename ddeout dde"excel|&sh.!r10c1:r24212c276" lrecl=32767 notab;
+
+data _null_;
+    set &part._&sh._paste;
+	file ddeout dsd dlm='09'x;
+	put catdesc	paperdes	prdmdrl	walls	lngth	colrnbr null30 SALES_2011_ARLINGTON	VOLUME_2011_ARLINGTON	SALES_2012_ARLINGTON	VOLUME_2012_ARLINGTON	SALES_2013_ARLINGTON	VOLUME_2013_ARLINGTON	SALES_2014_ARLINGTON	VOLUME_2014_ARLINGTON	null1	SALES_2011_ASHEVILLE	VOLUME_2011_ASHEVILLE	SALES_2012_ASHEVILLE	VOLUME_2012_ASHEVILLE	SALES_2013_ASHEVILLE	VOLUME_2013_ASHEVILLE	SALES_2014_ASHEVILLE	VOLUME_2014_ASHEVILLE	null2	SALES_2011_AUGUSTA	VOLUME_2011_AUGUSTA	SALES_2012_AUGUSTA	VOLUME_2012_AUGUSTA	SALES_2013_AUGUSTA	VOLUME_2013_AUGUSTA	SALES_2014_AUGUSTA	VOLUME_2014_AUGUSTA	null3	SALES_2011_AUSTELL	VOLUME_2011_AUSTELL	SALES_2012_AUSTELL	VOLUME_2012_AUSTELL	SALES_2013_AUSTELL	VOLUME_2013_AUSTELL	SALES_2014_AUSTELL	VOLUME_2014_AUSTELL	null4	SALES_2011_BEARDSTOWN	VOLUME_2011_BEARDSTOWN	SALES_2012_BEARDSTOWN	VOLUME_2012_BEARDSTOWN	SALES_2013_BEARDSTOWN	VOLUME_2013_BEARDSTOWN	SALES_2014_BEARDSTOWN	VOLUME_2014_BEARDSTOWN	null5	SALES_2011_CANTONMENT	VOLUME_2011_CANTONMENT	SALES_2012_CANTONMENT	VOLUME_2012_CANTONMENT	SALES_2013_CANTONMENT	VOLUME_2013_CANTONMENT	SALES_2014_CANTONMENT	VOLUME_2014_CANTONMENT	null6	SALES_2011_CORINTH	VOLUME_2011_CORINTH	SALES_2012_CORINTH	VOLUME_2012_CORINTH	SALES_2013_CORINTH	VOLUME_2013_CORINTH	SALES_2014_CORINTH	VOLUME_2014_CORINTH	null7	SALES_2011_CROSSETT	VOLUME_2011_CROSSETT	SALES_2012_CROSSETT	VOLUME_2012_CROSSETT	SALES_2013_CROSSETT	VOLUME_2013_CROSSETT	SALES_2014_CROSSETT	VOLUME_2014_CROSSETT	null8	SALES_2011_DALTON	VOLUME_2011_DALTON	SALES_2012_DALTON	VOLUME_2012_DALTON	SALES_2013_DALTON	VOLUME_2013_DALTON	SALES_2014_DALTON	VOLUME_2014_DALTON	null9	SALES_2011_FRANKLIN	VOLUME_2011_FRANKLIN	SALES_2012_FRANKLIN	VOLUME_2012_FRANKLIN	SALES_2013_FRANKLIN	VOLUME_2013_FRANKLIN	SALES_2014_FRANKLIN	VOLUME_2014_FRANKLIN	null10	SALES_2011_KERNERSVILLE	VOLUME_2011_KERNERSVILLE	SALES_2012_KERNERSVILLE	VOLUME_2012_KERNERSVILLE	SALES_2013_KERNERSVILLE	VOLUME_2013_KERNERSVILLE	SALES_2014_KERNERSVILLE	VOLUME_2014_KERNERSVILLE	null11	SALES_2011_KINGSTON	VOLUME_2011_KINGSTON	SALES_2012_KINGSTON	VOLUME_2012_KINGSTON	SALES_2013_KINGSTON	VOLUME_2013_KINGSTON	SALES_2014_KINGSTON	VOLUME_2014_KINGSTON	null12	SALES_2011_LANCASTER	VOLUME_2011_LANCASTER	SALES_2012_LANCASTER	VOLUME_2012_LANCASTER	SALES_2013_LANCASTER	VOLUME_2013_LANCASTER	SALES_2014_LANCASTER	VOLUME_2014_LANCASTER	null13	SALES_2011_LELAND	VOLUME_2011_LELAND	SALES_2012_LELAND	VOLUME_2012_LELAND	SALES_2013_LELAND	VOLUME_2013_LELAND	SALES_2014_LELAND	VOLUME_2014_LELAND	null14	SALES_2011_MINERVA	VOLUME_2011_MINERVA	SALES_2012_MINERVA	VOLUME_2012_MINERVA	SALES_2013_MINERVA	VOLUME_2013_MINERVA	SALES_2014_MINERVA	VOLUME_2014_MINERVA	null15	SALES_2011_PALATKA	VOLUME_2011_PALATKA	SALES_2012_PALATKA	VOLUME_2012_PALATKA	SALES_2013_PALATKA	VOLUME_2013_PALATKA	SALES_2014_PALATKA	VOLUME_2014_PALATKA	null16	SALES_2011_PHOENIX	VOLUME_2011_PHOENIX	SALES_2012_PHOENIX	VOLUME_2012_PHOENIX	SALES_2013_PHOENIX	VOLUME_2013_PHOENIX	SALES_2014_PHOENIX	VOLUME_2014_PHOENIX	null17	SALES_2011_ROCK_HILL	VOLUME_2011_ROCK_HILL	SALES_2012_ROCK_HILL	VOLUME_2012_ROCK_HILL	SALES_2013_ROCK_HILL	VOLUME_2013_ROCK_HILL	SALES_2014_ROCK_HILL	VOLUME_2014_ROCK_HILL	null18	SALES_2011_ROGERSVILLE	VOLUME_2011_ROGERSVILLE	SALES_2012_ROGERSVILLE	VOLUME_2012_ROGERSVILLE	SALES_2013_ROGERSVILLE	VOLUME_2013_ROGERSVILLE	SALES_2014_ROGERSVILLE	VOLUME_2014_ROGERSVILLE	null19	SALES_2011_SAGINAW	VOLUME_2011_SAGINAW	SALES_2012_SAGINAW	VOLUME_2012_SAGINAW	SALES_2013_SAGINAW	VOLUME_2013_SAGINAW	SALES_2014_SAGINAW	VOLUME_2014_SAGINAW	null20	SALES_2011_SALT_LAKE	VOLUME_2011_SALT_LAKE	SALES_2012_SALT_LAKE	VOLUME_2012_SALT_LAKE	SALES_2013_SALT_LAKE	VOLUME_2013_SALT_LAKE	SALES_2014_SALT_LAKE	VOLUME_2014_SALT_LAKE	null21	SALES_2011_SILSBEE	VOLUME_2011_SILSBEE	SALES_2012_SILSBEE	VOLUME_2012_SILSBEE	SALES_2013_SILSBEE	VOLUME_2013_SILSBEE	SALES_2014_SILSBEE	VOLUME_2014_SILSBEE	null22	SALES_2011_TACOMA	VOLUME_2011_TACOMA	SALES_2012_TACOMA	VOLUME_2012_TACOMA	SALES_2013_TACOMA	VOLUME_2013_TACOMA	SALES_2014_TACOMA	VOLUME_2014_TACOMA	null23	SALES_2011_TAYLORS	VOLUME_2011_TAYLORS	SALES_2012_TAYLORS	VOLUME_2012_TAYLORS	SALES_2013_TAYLORS	VOLUME_2013_TAYLORS	SALES_2014_TAYLORS	VOLUME_2014_TAYLORS	null24	SALES_2011_TEXARKANA	VOLUME_2011_TEXARKANA	SALES_2012_TEXARKANA	VOLUME_2012_TEXARKANA	SALES_2013_TEXARKANA	VOLUME_2013_TEXARKANA	SALES_2014_TEXARKANA	VOLUME_2014_TEXARKANA	null25	SALES_2011_TOLEDO	VOLUME_2011_TOLEDO	SALES_2012_TOLEDO	VOLUME_2012_TOLEDO	SALES_2013_TOLEDO	VOLUME_2013_TOLEDO	SALES_2014_TOLEDO	VOLUME_2014_TOLEDO	null26	SALES_2011_TORONTO	VOLUME_2011_TORONTO	SALES_2012_TORONTO	VOLUME_2012_TORONTO	SALES_2013_TORONTO	VOLUME_2013_TORONTO	SALES_2014_TORONTO	VOLUME_2014_TORONTO	null27	SALES_2011_WEST_MONROE	VOLUME_2011_WEST_MONROE	SALES_2012_WEST_MONROE	VOLUME_2012_WEST_MONROE	SALES_2013_WEST_MONROE	VOLUME_2013_WEST_MONROE	SALES_2014_WEST_MONROE	VOLUME_2014_WEST_MONROE	null28	SALES_2011_WEYERS_CAVE	VOLUME_2011_WEYERS_CAVE	SALES_2012_WEYERS_CAVE	VOLUME_2012_WEYERS_CAVE	SALES_2013_WEYERS_CAVE	VOLUME_2013_WEYERS_CAVE	SALES_2014_WEYERS_CAVE	VOLUME_2014_WEYERS_CAVE	null29	SALES_2011_WINNIPEG	VOLUME_2011_WINNIPEG	SALES_2012_WINNIPEG	VOLUME_2012_WINNIPEG	SALES_2013_WINNIPEG	VOLUME_2013_WINNIPEG	SALES_2014_WINNIPEG	VOLUME_2014_WINNIPEG
+;
+run;
+
+data _null_;
+        file cmds;
+        Put "[workbook.activate(""&sh."")]"; 
+        put "[SELECT(""R&del:R24212"")]"; * highlighting rows to delete *;
+        put '[EDIT.DELETE(2)]'; 
+        put "[SELECT(""R1C1"")]";
+    run;
+
+data _null_; rc=sleep(2);run;
+
+	%mend sheet;
+%SHEET(AUSTELL,Austell,Austell,300,Caraustar);
+%SHEET(CROSSETT,Crossett,Crossett,300,Caraustar);
+%SHEET(PHOENIX,Phoenix,Phoenix,300,Caraustar);
+%SHEET(ARLINGTON,Arlington,Arlington,300,Caraustar);
+%SHEET(BEARDSTOWN,Beardstown,Beardstown,300,Caraustar);
+%SHEET(CANTONMENT,Cantonment,Cantonment,300,Caraustar);
+%SHEET(KERNERSVILLE,Kernersville,Kernersville,300,Caraustar);
+%SHEET(LANCASTER,Lancaster,Lancaster,300,Caraustar);
+%SHEET(MINERVA,Minerva,Minerva,300,Caraustar);
+%SHEET(PALATKA,Palatka,Palatka,300,Caraustar);
+%SHEET(ROCK HILL,Rock Hill,Rock_Hill,300,Caraustar);
+%SHEET(SALT LAKE,Salt Lake,Salt_Lake,500,Caraustar);
+%SHEET(SILSBEE,Silsbee,Silsbee,300,Caraustar);
+%SHEET(TACOMA,Tacoma,Tacoma,300,Caraustar);
+%SHEET(TAYLORS,Taylors,Taylors,300,Caraustar);
+%SHEET(TEXARKANA,Texarkana,Texarkana,300,Caraustar);
+%SHEET(TOLEDO,Toledo,Toledo,300,Caraustar);
+%SHEET(WEST MONROE,West Monroe,W_Monroe,300,Caraustar);
+%SHEET(ATLANTA,Atlanta,ATLANTA,300,Newark);
+%SHEET(AURORA,Aurora,AURORA,500,Newark);
+%SHEET(BAY MINETTE,Bay Minette,BAY_MINETTE,300,Newark);
+%SHEET(CEDARTOWN,Cedartown,CEDARTOWN,300,Newark);
+%SHEET(FRANKLIN,Franklin,FRANKLIN,300,Newark);
+%SHEET(LONGVIEW,Longview,LONGVIEW,300,Newark);
+%SHEET(ONTARIO,Ontario,ONTARIO,300,Newark);
+%SHEET(RURAL HALL,Rural Hall,RURAL_HALL,300,Newark);
+%SHEET(YORK,York,YORK,300,Newark);
+/*
+data _null_;
+	file cmds;
+	put "[save.as(""\\bosproject\Proj\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\data\Base Tables\Caraustar's Response to Spec 3(&book.) - Plants_v2.xlsx"")]";
+        put "[close()]";
+	run;
+*
+%mend partB; 
+*%partB(where relevant_area=1 & internal=0,part2a,a);
+*%partB(where relevant_area=1 & manu_inside_plant=1 & internal=0,part2b,b);
+*%partB(where relevant_area=1 & manu_inside_plant=0 & internal=0,part2c,c);
+%partB(where relevant_area=1 & internal_v2=1,part2d,d);
+*%partB(where relevant_area=1 & resale=1 & internal=0,part2e,e);
+
+proc sort data=use.superheader_list_part2d nodupkey;
+	by tab_name included_sh excluded_sh;run;
