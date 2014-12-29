@@ -1,0 +1,771 @@
+libname use "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use";
+libname out "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out";
+libname data "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\data";
+libname raw "\\bosproject\Proj\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\Caraustar Plant Sales Data\Raw Data (2014-09-04)";
+
+**************CARAUSTAR RELEVANT AREA ANALYSIS*********************************;
+/*
+data ship_zips_replace;
+	infile "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\data\LOAD NUMBERS WITH MISSING ZIPS CRA_v2.csv"
+	delimiter=',' lrecl=32000 missover dsd firstobs=2;
+	informat PLANTID $6. ; format PLANTID $6. ;
+	informat LOADNO best12. ; format LOADNO best12. ;
+	informat origzip $16. ; format origzip $16. ;
+	informat SHPCTY $35. ; format SHPCTY $35. ;
+	informat SHPST $6. ; format SHPST $6. ;
+	informat SHPZIP $10. ; format SHPZIP $10. ;
+input PLANTID $ LOADNO origzip $ SHPCTY $ SHPST $ SHPZIP $;
+	PLANTID=upcase(strip(PLANTID)); 	
+	LOADNO=upcase(strip(LOADNO)); 
+	origzip=upcase(strip(origzip));
+	run;
+
+
+%macro sort2(ds,nm);
+
+data &nm.;
+	set &ds.;
+	PLANTID=upcase(strip(PLANTID)); 	
+	LOADNO=upcase(strip(LOADNO)); 
+	origzip=upcase(strip(origzip));
+	run;
+
+proc sort data=&nm. out=&nm.;
+	by PLANTID LOADNO origzip;
+	run;
+
+%mend sort2;
+%sort2(raw.sales_detail,sales_detail);
+%sort2(ship_zips_replace,ship_zips_replace);
+
+data sales_detail_v2 ;
+	merge sales_detail (in=a) ship_zips_replace (in=b rename=(SHPZIP=SHPZIP2 SHPCTY=SHPCTY2 SHPST=SHPST2));
+	by PLANTID LOADNO ORIGZIP;
+
+if SHPCTY2 ne " " then smcity=strip(upcase(SHPCTY2));
+if SHPST2 ne " " then STATEID=strip(upcase(SHPST2));
+if SHPZIP2 ne " " then shzip=strip(upcase(SHPZIP2));
+
+if a then origin="raw";
+if b then origin="MIS";
+run;
+ 
+proc import datatable='CORRECTED O-D PAIRS'
+out=plant_shipto dbms=accesscs replace;
+database="F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\Caraustar Plant Sales Data\Raw Data (2014-09-04)\TUBES SALES DATA ONLY REVISED -20140904_edit.accdb";
+	run;
+
+%macro sort(ds,nm);
+
+data &nm.;
+	set &ds.;
+	orgcty=upcase(strip(orgcty));
+	smcity=upcase(strip(smcity));
+	stateid=upcase(strip(stateid));
+	shzip=upcase(strip(shzip));   
+	origzip=upcase(strip(origzip));
+	run;
+
+proc sort data=&nm.;
+	by orgcty origzip smcity stateid shzip;
+	run;
+
+%mend sort;
+%sort(sales_detail_v2,sales_detail_v2);
+%sort(plant_shipto,plant_shipto);
+
+data sales_detail_v3 ;
+	merge sales_detail_v2 (in=a) plant_shipto (in=b);
+	by orgcty origzip smcity stateid shzip;
+	*if a;
+
+if UPDATED_SCITY ne " " then smcity=strip(upcase(UPDATED_SCITY));
+if UPDATED_SSTATE ne " " then STATEID=strip(upcase(UPDATED_SSTATE));
+if UPDATED_ZIP ne " " then shzip=strip(upcase(UPDATED_ZIP));
+
+if b then origin="OD";
+run;
+
+*/
+
+data use.plant_data_1114 (compress=yes);
+	set use.sales_detail_v3;
+
+****internal sales***;
+
+	if index(upcase(CMNAME),"CSAR")>0 or index(upcase(ABALPH),"CSAR")>0 or index(upcase(CMNAME),"CARAUSTAR")>0 then internal=1;
+	else if index(upcase(strip(CMNAME)),"AUSTELL BOX BOARD CORP")>0 then internal=1;  
+	else if index(upcase(CMNAME),"SWEETWATER")>0 then internal=1;
+	else internal=0;
+
+	if strip(upcase(CMNAME)) in ("AUSTELL BOX BOARD CORP.#2" "CARAUSTAR" "CARAUSTAR - TAMA PAPERBOARD"
+"CARAUSTAR INDUSTRIES" "CARAUSTAR TACOMA" "CAROTELL PAPER" "CAROTELL PAPER BOARD" "CSAR MILL CAROTELL PAPERBOARD" "SWEETWATER PAPERBOARD")
+& catdesc="SPIRAL TUBE" then internal_v2=1;
+else internal_v2=0;
+
+
+	***resales***;
+
+if upcase(strip(catcode)) in ("PA", "TS", "TY", "TO", "TK", "TC", "TF", "TR", "TU", "FC") then resale=0;
+	else resale=1; 
+
+**deletions***;
+	if upcase(strip(INVOTYPE)) ne "RI" then delete;
+	*****(per 9/18 not deleting these) if upcase(strip(endusdsc)) in ("ADHESIVE" "MISCELLANEOUS NON-TUBE PRODUCTS" "LAYFLAT TUBING" "PLUGS" "ROLL HEADERS" 
+"END CAPS" "PROTECT-A-BOARD") then delete;
+	if upcase(strip(CATDESC)) in ("PAB DIRECT MATERIAL - PAPERBOARD" "PROTECT-A-BOARD") then delete;
+	if index(upcase(plantnme),"PAB")>0 then delete;
+	if upcase(strip(catcode)) not in ("FC" "KS" "RC" "TC" "TF" "TK" "TO" "TR" "TS" "TU" "TY" "CC") then delete;
+
+****geo deletes*****;
+	if upcase(strip(plantnme)) in ("AUGUSTA" "ASHEVILLE" "LELAND" "ROGERSVILLE" "WEYERS CAVE") then source_del=1;
+	else source_del=0;
+
+	format country $28.;
+	country="USA";
+	if strip(upcase(stateid)) in ("BC" "AB" "SK" "ON" "QC" "NB" "NS" "PE" "PEI" "MB" "NL") then country="Canada";
+	if strip(upcase(stateid))="99" & upcase(strip(smcity)) in ("FREEPORT BAHAMAS" "HORSHAM, WEST SUSSEX" "WEST MIDLANDS, UK  B240RB") then country="International";
+	if index(strip(upcase(shzip)),"INT")>0 then country="International";
+	if upcase(strip(smcity)) in ("UNITED KINGDOM" "WEST MIDLANDS, UK  B240RB" "FREEPORT BAHAMAS") & shzip in ("B24 0RB" "B240RB") then country="International";
+	if upcase(strip(smcity)) in ("FREEPORT BAHAMAS") then country="International";
+	if strip(upcase(stateid))="99" & upcase(strip(smcity)) in ("QUEBEC" "NIAGRA FALLS ON") then do;
+			country="Canada";
+			if upcase(strip(smcity)) in ("QUEBEC") then stateid="QC";
+			if upcase(strip(smcity)) in ("NIAGRA FALLS ON") then stateid="ON";
+			end;
+
+	if country="USA" & anyalpha(shzip) >0 then country="Canada";
+	if upcase(strip(cmname))="ANIXTER FASTENERS" then do;
+			country="International";
+			shzip="PE2 6TE";
+			end;
+	if upcase(strip(cmname))="CEMEX" then do;
+			country="USA";
+			stateid="FL";
+			end;
+	if upcase(strip(cmname))="FLOREX EXPLOSIVES" then country="USA";
+	if index(upcase(shzip),"UNKNO")>0 & upcase(strip(stateid)) in ("FL" "AZ" "IL") then country="USA";
+
+***fix zip codes***;
+
+if strip(shzip)="85222" then shzip="85122";
+if strip(shzip)="85223" then shzip="85249";
+
+if strip(shzip)="24112" then stateid="VA";
+if strip(shzip)="28273" then stateid="NC";
+if strip(shzip)="41056" then stateid="KY";
+if strip(shzip)="53233" then stateid="WI";
+
+format zip $9.;
+format customer_name $200.;
+format address $200.;
+
+if index(strip(shzip),"-")>0 or index(strip(shzip),"|")>0 then zip=substr(strip(shzip),1,5);
+else zip=strip(shzip);
+
+smcity=upcase(strip(smcity));
+customer_name=strip(MAPA8)||"**"||upcase(strip(ABALPH));
+if upcase(strip(zip))='2409' then zip='27409';
+if upcase(strip(zip))='M1P2Y7' then zip='M1P 2Y7';
+if upcase(strip(zip))='L6Y5A4' then zip='L6Y 5A4';
+if upcase(strip(zip))='V4W2R1' then zip='V4W 2R1';
+if upcase(strip(zip))='L6Y5A4' then zip='L6Y 5A4';
+if upcase(strip(zip))='M8Z5L4' then zip='M8Z 5L4';
+if upcase(strip(zip))='H4C  1V9' then zip='H4C 1V9';
+if upcase(strip(zip))='H7S  1B1' then zip='H7S 1B1';
+if upcase(strip(zip))='K0C  1P0' then zip='K0C 1P0';
+if upcase(strip(zip))='K0H  1S0' then zip='K0H 1S0';
+if upcase(strip(zip))='K8N  5A2' then zip='K8N 5A2';
+if upcase(strip(zip))='K8V  6G7' then zip='K8V 6G7';
+if upcase(strip(zip))='L5T  1W1' then zip='L5T 1W1';
+if upcase(strip(zip))='L6T  3V1' then zip='L6T 3V1';
+if upcase(strip(zip))='M9W  5T1' then zip='M9W 5T1';
+if upcase(strip(zip))='QC G2C' then do;
+	stateid='QC';
+	zip='G2C 2E2';
+	end;
+if upcase(strip(zip)) in ('K8V-5R8' 'K8V-5') then zip='K8V 5R8';
+if upcase(strip(zip))='B240RB' then zip='B24 0RB';
+if upcase(strip(zip))='K6V  6K4' then zip='K6V 6K4';
+if upcase(strip(zip))='K7K  4Z6' then zip='K7K 4Z6';
+if upcase(strip(zip))='L5T1V6' then zip='L5T 1V6';
+if upcase(strip(zip))='L6T' then zip='L6T 3V1';
+
+address=upcase(strip(smcity))||", "||strip(upcase(STATEID))||" "||strip(upcase(zip))||" "||strip(country);
+
+********fix paper desctiption****;
+if strip(papercd)=".221" then PAPERDES="ERROR";
+if strip(papercd)="0" then PAPERDES="ERROR";
+if upcase(strip(papercd)) in ("1`" "100" "U100" "D" "S" "J" "C" "X") then PAPERDES="ULTRA 100";
+if upcase(strip(papercd))="K" then PAPERDES="KRAFT";
+if upcase(strip(papercd)) in ("O" "Y" "W") then PAPERDES="ODDLOT";
+if upcase(strip(papercd))="R" then PAPERDES="ULTRA 200";
+if upcase(strip(papercd))="F" then PAPERDES="FORMING BOARD";
+if strip(papercd)="" or strip(PAPERDES)="" then PAPERDES="OTHER";
+
+address=upcase(strip(address));
+
+if address="BRAMPTON, ON L6T  3V1 CANADA" then address="BRAMPTON, ON L6T 3V1 CANADA";
+
+run;*/
+
+**************OUTPUT ADDRESSES**********;
+/*
+proc sort data=use.plant_data_1114 (keep=smcity stateid zip address country ) nodupkey out=use.revised_address_list_4geo;
+	by smcity stateid zip country address;
+	run;
+
+data _null_;
+	set  use.revised_address_list_4geo;
+	file "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use\revised_address_list_4geo.xls" delimiter = '09'x lrecl = 32767;
+	put  address smcity stateid zip country;
+run;
+*/
+*********COLLAPSE***********************;
+
+proc means data=use.plant_data_1114 nway noprint;
+	class plantnme customer_name cmname year zip smcity country internal internal_v2 resale CATDESC PAPERDES PRDMDRL WALLS LNGTH COLRNBR endusdsc  address /missing;
+	var extndprc weights QTYSHIPD ;
+	output out=yr_zip_collapse (drop=_:) sum(extndprc)=sales sum(weights)=volume sum(QTYSHIPD)=QTYSHIPD ;
+	run;
+
+*****************MERGE ON LATS AND LONS****************;
+
+data cust_lat_lon (keep=address cust_lat cust_lon);
+	infile "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\data\Customer Locations Geocoded_v3.csv"
+	delimiter="," missover dsd lrecl=30000 firstobs=2;
+	informat address $60. ; format address $60. ;
+	informat found_address $60. ; format found_address $60. ;
+	informat cust_lat best32. ; format cust_lat best32. ;
+	informat cust_lon best32. ; format cust_lon best32. ;
+	informat number best12.; format number best32.;
+	informat status $20.; format status $20.;
+	informat type $20. ; format type $20. ;
+	informat quality $16. ; format quality $16. ;
+
+	input address $ found_address $ cust_lat cust_lon number status $ type $ quality $ ;
+
+address=upcase(strip(address)); 
+	run;
+
+	***USE SAS LATS AND LONS ***;
+
+proc sort data=cust_lat_lon;
+	by address;
+	run;
+
+proc sort data=yr_zip_collapse;
+	by address;
+	run;
+
+data yr_zip_collapse_lats;
+	merge yr_zip_collapse (in=a) cust_lat_lon (in=b);
+	by address;
+	if a & b ;
+	if upcase(strip(address))="ESPLANADE GOLF & COUNTRY CLUB JOB, FL 34429 USA" then do;
+cust_lat="28.870038";
+cust_lon="-82.669947";
+end;
+if upcase(strip(plantnme))="KERNERSVILLE TUBE" then plantnme="KERNERSVILLE";
+if upcase(strip(plantnme))="TACOMA TUBE" then plantnme="TACOMA";
+	run;
+
+proc sort data=yr_zip_collapse_lats;
+	by plantnme;
+	run;
+
+*************DETERMINE RELEVANT AREAS WITH SOURCE LATS AND LONGS**************;
+
+proc import datafile="F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\data\IPG Locations.xlsx"
+	out=comp_locations dbms=excel replace;
+	run;
+
+data others (keep=company city lat lon rename=(company=source_plant city=source lat=source_lat lon=source_lon));
+	set comp_locations (where=(company in ("Caraustar" "Newark Group"))) ;
+if (company in ("Caraustar") & upcase(strip(city)) in ('ARLINGTON'	'AUSTELL'	'BEARDSTOWN'	'CANTONMENT'	'CROSSETT'	
+'KERNERSVILLE'	'LANCASTER'	'MINERVA'	'PALATKA'	'PHOENIX'	'ROCK HILL'	'SILSBEE'	'TACOMA'	'SALT LAKE'
+'TAYLORS'	'TEXARKANA'	'TOLEDO'	'WEST MONROE' 'BAY MINETTE' 'ONTARIO')) or 
+(company in ("Newark Group") & upcase(strip(city)) in ('BAY MINETTE' 'ONTARIO' 'CEDARTOWN' 'RURAL HALL' 'FRANKLIN' 'YORK' 'ATLANTA' 'LONGVIEW' 'AURORA')) then delete;
+	run;
+
+ proc sort data=comp_locations (keep=company city state lat lon rename=(company=competitor city=comp_city state=comp_state lat=comp_lat lon=comp_lon))
+out=plants_lats_lons;
+	where (competitor in ("Caraustar") & upcase(strip(comp_city)) in ('ARLINGTON'	'AUSTELL'	'BEARDSTOWN'	'CANTONMENT'	'CROSSETT'	
+'KERNERSVILLE'	'LANCASTER'	'MINERVA'	'PALATKA'	'PHOENIX'	'ROCK HILL'	'SILSBEE'	'TACOMA' 'SALT LAKE' 	
+'TAYLORS'	'TEXARKANA'	'TOLEDO'	'WEST MONROE' 'BAY MINETTE' 'ONTARIO')) or 
+(competitor in ("Newark Group") & upcase(strip(comp_city)) in ('BAY MINETTE' 'ONTARIO' 'CEDARTOWN' 'RURAL HALL' 'FRANKLIN' 'YORK' 'ATLANTA' 
+'LONGVIEW' 'AURORA')) ;
+ 	by competitor comp_city;
+	run;
+
+data use.plants_lats_lons;
+	set plants_lats_lons;
+if upcase(strip(comp_city)) in ("SALT LAKE" "AURORA") then radius=500;
+	else if upcase(strip(comp_city)) in ('ARLINGTON'	'AUSTELL'	'BEARDSTOWN'	'CANTONMENT'	'CROSSETT'	'KERNERSVILLE'	
+'LANCASTER'	'MINERVA'	'PALATKA'	'PHOENIX'	'ROCK HILL'	'SILSBEE'	'TACOMA'	'TAYLORS'	'TEXARKANA'	'TOLEDO'	'WEST MONROE'
+'BAY MINETTE' 'ONTARIO' 'CEDARTOWN' 'RURAL HALL' 'FRANKLIN' 'YORK' 'ATLANTA'  'LONGVIEW') then radius=300;
+else radius=0; 
+run;
+
+****merge on source lats & longs****;
+
+ proc sort data=comp_locations (keep=company city lat lon rename=(city=plantnme lat=source_lat lon=source_lon)) out=source_lats_lons;
+	where company in ("Caraustar");
+ 	by plantnme;
+	run; 
+
+data source_lats_lons;
+	set source_lats_lons (drop=company);
+	plantnme=upcase(strip(plantnme));
+	run;
+
+data yr_zip_collapse_lats2;
+	merge yr_zip_collapse_lats (in=a) source_lats_lons (in=b);
+	by plantnme;
+	if a;	
+	if upcase(strip(plantnme))="ROGERSVILLE" then do;
+	source_lat=34.825585;
+	source_lon=-87.294645;
+	end;
+	if upcase(strip(plantnme)) in ("ASHEVILLE" "ASHVILLE") then do;
+	source_lat=35.490922;
+	source_lon=-82.520855;
+	end;
+	if upcase(strip(plantnme))="AUGUSTA" then do;****1414 Hayes Dr, Augusta, GA 30901;
+	source_lat=33.453234;
+	source_lon=-81.939668;
+	end;
+	if upcase(strip(plantnme))="WEYERS CAVE" then do;
+	source_lat=38.276844;
+	source_lon=-78.925465;
+	end;
+	if upcase(strip(plantnme))="LELAND" then do;*2210 MERCANTILE DR LELAND,  NC  28451;
+	source_lat=34.265085;
+	source_lon=-78.060172;
+	end;
+	run;
+
+proc sort data=yr_zip_collapse_lats2;
+	by source_lat;
+	run;
+**************FIND SOURCES IN RELEVANT AREA*****************;
+/*
+proc sql;
+	create table use.other_source_combos as
+	select *
+	from use.plants_lats_lons as a, others as b;
+	quit;
+
+
+proc export data=use.other_source_combos
+	outfile="F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use\other_source_combos.dta"
+	dbms=dta replace;
+	run;
+
+proc import datafile="F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use\other_source_combos_4sas.dta"
+	out=other_source_combos_4sas replace dbms=dta;
+	run;
+
+proc sort data=other_source_combos_4sas;
+	where radius ne 0;
+	by source source_dist;
+	run;
+
+data use.other_source_combos;
+	set other_source_combos_4sas ;
+	by source source_dist;
+	if first.source;
+	if source_dist > radius then del=1;
+	else del=0;
+	run;
+*/
+
+****add lats and lons***;
+
+proc sql;
+	create table relevant_area_explode as
+	select *
+	from yr_zip_collapse_lats2 as a, use.plants_lats_lons as b  ;
+	quit;
+
+**********************TO STATA FOR VINCENTY*************************;
+
+proc export data=relevant_area_explode
+	outfile="F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use\relevant_area_explode_4stata_v2.dta"
+	dbms=dta replace;
+	run;
+
+*****************************VINCENTY*****************************;
+/*
+proc import datafile="F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use\relevant_area_explode_4sas_v2.dta"
+	out=relevant_area_explode_4sas dbms=dta replace;
+	run;
+
+proc sort data=relevant_area_explode_4sas;
+	by plantnme internal resale CATDESC PRDMDRL WALLS LNGTH PAPERDES COLRNBR year zip dist comp_city;
+	run;
+
+data use.relevant_area_closest;
+	set relevant_area_explode_4sas;
+	by plantnme internal resale CATDESC PRDMDRL WALLS LNGTH PAPERDES COLRNBR year zip dist comp_city;
+	if first.zip;
+	if dist < radius then relevant_area=1;
+	else relevant_area=0;
+	if country in ("USA" "Canada") then us_can=1;
+	else us_can=0;
+	if us_can=0 then relevant_area=0;
+	if plantnme="WINNIPEG" then manu_inside=0;
+	else manu_inside=1;
+	run;
+
+proc sort data=use.relevant_area_closest;
+	by us_can;
+	run;
+
+*******************************ANALYSIS *********************;
+
+%macro analysis(xxxx,part); 
+
+proc means data=use.relevant_area_closest nway noprint;
+	&xxxx. ;
+	class CATDESC PRDMDRL WALLS LNGTH PAPERDES COLRNBR   year /missing;
+	var sales volume;
+	output out=&part. (drop=_:) sum=;
+	run;
+
+proc transpose data=&part. out=&part.;
+	by CATDESC PRDMDRL WALLS LNGTH PAPERDES COLRNBR  ;
+	id  year;
+	var sales volume;
+	run;
+
+data &part._s (drop=_n: rename=(_2011=sales_2011 _2012=sales_2012 _2013=sales_2013 _2014=sales_2014));
+	format part;
+	set &part. (where=(_NAME_="sales") drop=_l:);
+	part="&part.";
+	run;
+
+data &part._v (drop=_n: rename=(_2011=volume_2011 _2012=volume_2012 _2013=volume_2013 _2014=volume_2014));
+	format part;
+	set &part. (where=(_NAME_="volume") drop=_l:);
+	part="&part.";
+	run;
+
+data &part.;
+	merge &part._s &part._v;
+	by part;
+	run;
+
+%mend analysis;
+%analysis(where us_can=1 & internal=0,part1a);
+%analysis(where relevant_area=1 & internal=0,part2a);
+
+%analysis(where us_can=1 & internal=0,part1b);
+%analysis(where manu_inside=1 & relevant_area=1 & internal=0,part2b);
+
+%analysis(where manu_inside=3 & us_can=1 & internal=0,part1c);
+%analysis(where manu_inside=0 & relevant_area=1 & internal=0,part2c);
+
+%analysis(where us_can=1 & internal=1,part1d);
+%analysis(where relevant_area=1 & internal=1,part2d);
+
+%analysis(where us_can=1 & resale=1 & internal=0,part1e);
+%analysis(where relevant_area=1 & resale=1 & internal=0,part2e);
+
+%macro code(code);
+
+data out.relevant_area_part&code.;
+	format CATDESC PAPERDES PRDMDRL WALLS LNGTH  COLRNBR space1 
+ A_sales_2011 A_volume_2011 A_sales_2012 A_volume_2012 A_sales_2013 A_volume_2013 A_sales_2014 A_volume_2014 space2
+B_sales_2011 B_volume_2011 B_sales_2012 B_volume_2012 B_sales_2013 B_volume_2013 B_sales_2014 B_volume_2014;
+	merge part1&code. (drop=part rename=(sales_2011=A_sales_2011
+sales_2012=A_sales_2012
+sales_2013=A_sales_2013
+sales_2014=A_sales_2014
+volume_2011=A_volume_2011
+volume_2012=A_volume_2012
+volume_2013=A_volume_2013
+volume_2014=A_volume_2014))
+part2&code. (drop=part rename=(sales_2011=B_sales_2011
+sales_2012=B_sales_2012
+sales_2013=B_sales_2013
+sales_2014=B_sales_2014
+volume_2011=B_volume_2011
+volume_2012=B_volume_2012
+volume_2013=B_volume_2013
+volume_2014=B_volume_2014));
+	by CATDESC PRDMDRL WALLS LNGTH PAPERDES COLRNBR;
+	space1=" ";
+	space2=" ";
+	run;
+
+%mend code;
+%code(A);
+%code(B);
+%code(D);
+*%code(E);
+
+data out.relevant_area_partC;
+	format CATDESC PAPERDES PRDMDRL WALLS LNGTH  COLRNBR space1 B_sales_2011 B_volume_2011 B_sales_2012 B_volume_2012 B_sales_2013 B_volume_2013 B_sales_2014 B_volume_2014;
+	set part2c (drop=part rename=(sales_2011=B_sales_2011
+sales_2012=B_sales_2012
+sales_2013=B_sales_2013
+sales_2014=B_sales_2014
+volume_2011=B_volume_2011
+volume_2012=B_volume_2012
+volume_2013=B_volume_2013
+volume_2014=B_volume_2014));
+	space1=" ";
+	space2=" ";
+run;
+
+data out.relevant_area_partE;
+	format CATDESC PAPERDES PRDMDRL WALLS LNGTH  COLRNBR space1
+ A_sales_2011 A_volume_2011 A_sales_2012 A_volume_2012 A_sales_2013 A_volume_2013 A_sales_2014 A_volume_2014 space2
+B_sales_2011 B_volume_2011 B_sales_2012 B_volume_2012 B_sales_2013 B_volume_2013 B_sales_2014 B_volume_2014;
+	merge part1e (drop=part rename=(
+sales_2012=A_sales_2012
+sales_2013=A_sales_2013
+sales_2014=A_sales_2014
+volume_2012=A_volume_2012
+volume_2013=A_volume_2013
+volume_2014=A_volume_2014))
+part2e (drop=part rename=(
+sales_2012=B_sales_2012
+sales_2013=B_sales_2013
+sales_2014=B_sales_2014
+volume_2012=B_volume_2012
+volume_2013=B_volume_2013
+volume_2014=B_volume_2014));
+	by CATDESC PRDMDRL WALLS LNGTH PAPERDES COLRNBR;
+	space1=" ";
+	space2=" ";
+	run;
+
+******************TOP CUSTOMERS*****;
+
+proc sort data=use.relevant_area_closest (keep=customer_name address) nodupkey out=address_list;
+	by customer_name address;
+	run;
+
+proc sql;
+	create table address_list2 as
+	select customer_name, address, count(distinct address) as addy_count
+	from address_list
+	group by customer_name;
+	quit;
+
+data address_list3;
+	set address_list2;
+	if addy_count > 1 then address="MULTIPLE ADDRESSES";
+	run;
+
+proc sort data=address_list3 (keep=customer_name address) nodupkey out=address_list4;
+	by customer_name address;
+	run;
+
+%macro top(nm);
+
+proc means data=use.relevant_area_closest nway noprint;
+	where &nm.=1 ;
+	class customer_name ENDUSDSC year /missing;
+	var volume sales ;
+	output out=top20_&nm. (drop=_:) sum=;
+	run;
+	
+data top20_&nm.;
+	merge top20_&nm. (in=a) address_list4 (in=b);
+	by customer_name;
+	if a;
+	run;
+
+proc sort data=top20_&nm.;
+	by ENDUSDSC year descending volume sales ;
+	run;
+
+data top20_&nm._11 (drop=year address rename=(company=company_&nm._11 sales=sales_&nm._11 volume=volume_&nm._11))
+	 top20_&nm._12 (drop=year address rename=(company=company_&nm._12 sales=sales_&nm._12 volume=volume_&nm._12))
+	 top20_&nm._13 (drop=year address rename=(company=company_&nm._13 sales=sales_&nm._13 volume=volume_&nm._13)) 
+	 top20_&nm._14 (drop=year address rename=(company=company_&nm._14 sales=sales_&nm._14 volume=volume_&nm._14));
+	 format ENDUSDSC rank company volume sales ;
+	set top20_&nm.;
+	by ENDUSDSC year descending volume sales;
+	if first.year then rank=1;
+	else rank+1;
+	if rank < 21;
+	format company $70.;
+	company=strip(substr(customer_name,index(customer_name,"**")+2,70))||" - "||strip(upcase(address));
+if year=2011 then output top20_&nm._11;
+if year=2012 then output top20_&nm._12;
+if year=2013 then output top20_&nm._13;
+if year=2014 then output top20_&nm._14;
+
+	run;
+
+data top20_&nm.2;
+	merge top20_&nm._11 top20_&nm._12 top20_&nm._13 top20_&nm._14;
+	by endusdsc rank;
+	run;
+
+%mend top;
+%top(us_can);
+%top(relevant_area);
+
+***RELEVANT AREA****;
+
+data out.top_customers;
+	merge top20_us_can2 
+	top20_relevant_area2;
+	by ENDUSDSC rank;
+	rank2="#"||strip(rank);
+	if ENDUSDSC ne " ";
+	run;
+
+data _null_;
+	set out.top_customers;
+	by ENDUSDSC rank;
+	file "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out\top_customers_formatted.xls" delimiter = '09'x lrecl = 32767;
+	if first.ENDUSDSC then do;
+	put ENDUSDSC;
+	put '09'x rank2 '09'x company_us_can_11 volume_us_can_11 sales_us_can_11 '09'x 	company_us_can_12 volume_us_can_12 sales_us_can_12	 '09'x 
+	company_us_can_13 volume_us_can_13 sales_us_can_13	 '09'x 	company_us_can_14 volume_us_can_14  sales_us_can_14 '09'x 
+	company_relevant_area_11 volume_relevant_area_11 sales_relevant_area_11 '09'x company_relevant_area_12  volume_relevant_area_12 sales_relevant_area_12 '09'x 
+	company_relevant_area_13 volume_relevant_area_13 sales_relevant_area_13	'09'x company_relevant_area_14 volume_relevant_area_14 sales_relevant_area_14 ;
+	end;
+	else 	put '09'x rank2 '09'x company_us_can_11 volume_us_can_11 sales_us_can_11 '09'x 	company_us_can_12 volume_us_can_12 sales_us_can_12	 '09'x 
+	company_us_can_13 volume_us_can_13 sales_us_can_13	 '09'x 	company_us_can_14 volume_us_can_14  sales_us_can_14 '09'x 
+	company_relevant_area_11 volume_relevant_area_11 sales_relevant_area_11 '09'x company_relevant_area_12 volume_relevant_area_12 sales_relevant_area_12 '09'x 
+	company_relevant_area_13 volume_relevant_area_13 sales_relevant_area_13	'09'x company_relevant_area_14 volume_relevant_area_14 sales_relevant_area_14 ;
+		run;
+
+		*********SPEC 7******************;
+*/
+proc means data= use.plant_data_1114 nway noprint;
+	where internal=0 ;   ****************************************DELETE RESALE?????*****************;
+	class plantnme year address /missing;
+	var extndprc weights;
+	output out=plnm_year_zip (drop=_:)  sum(extndprc)=sales sum(weights)=volume;
+	run;
+
+data plnm_year_zip;
+	set plnm_year_zip ;
+	plantnme=upcase(strip(plantnme));
+if plantnme="KERNERSVILLE TUBE" then plantnme="KERNERSVILLE";
+if plantnme="TACOMA TUBE" then plantnme="TACOMA";
+run;
+
+proc sort data=plnm_year_zip;
+	by plantnme;
+	run;
+
+proc sort data=comp_locations (keep=company city lat lon rename=(city=plantnme lat=source_lat lon=source_lon)) out=plantnme;
+	where upcase(strip(company))="CARAUSTAR";
+	by plantnme;
+	run;
+
+data plantnme;
+	set plantnme;
+	plantnme=upcase(strip(plantnme));
+run;
+
+data plnm_year_lats;
+	merge plnm_year_zip (in=a) plantnme (in=b);
+	by plantnme;
+	if a;
+	if upcase(strip(plantnme))="ROGERSVILLE" then do;
+	source_lat=34.825585;
+	source_lon=-87.294645;
+	end;
+	if upcase(strip(plantnme)) in ("ASHEVILLE" "ASHVILLE") then do;
+	source_lat=35.490922;
+	source_lon=-82.520855;
+	end;
+	if upcase(strip(plantnme))="AUGUSTA" then do;****1414 Hayes Dr, Augusta, GA 30901;
+	source_lat=33.453234;
+	source_lon=-81.939668;
+	end;
+	if upcase(strip(plantnme))="WEYERS CAVE" then do;
+	source_lat=38.276844;
+	source_lon=-78.925465;
+	end;
+	if upcase(strip(plantnme))="LELAND" then do;*2210 MERCANTILE DR LELAND,  NC  28451;
+	source_lat=34.265085;
+	source_lon=-78.060172;
+	end;
+	run;
+
+**********MERGE ON CUSTOMER LATS AND LONGS*******;
+
+proc sort data=plnm_year_lats;
+	by address;
+	run;
+
+data plnm_year_lats;
+	merge plnm_year_lats (in=a) cust_lat_lon (in=b);
+	by address;
+	if a & b;
+	run;
+
+**********************TO STATA FOR VINCENTY*************************;
+
+proc export data=plnm_year_lats
+	outfile="F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use\plnm_year_lats_4stata.dta"
+	dbms=dta replace;
+	run;
+
+*****************************VINCENTY*****************************;
+
+proc import datafile="F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use\plnm_year_lats_4sas.dta"
+	out=plnm_year_lats_4sas dbms=dta replace;
+	run;
+
+proc sort data=plnm_year_lats_4sas ;
+	where source_dist ne . & volume >0 & sales >0;
+	by plantnme year descending source_dist address;
+	run;
+
+data relevant_area_further (keep=plantnme year source_dist sales volume rename=(source_dist=furthest_distance sales=furtherest_sales volume=furthest_volume));
+	set plnm_year_lats_4sas;
+	by plantnme year descending source_dist address;
+	if first.year;
+	run;
+
+%macro cl(cl,nm);
+
+proc means data=plnm_year_lats_4sas nway noprint;
+	&cl. ;
+	class plantnme year /missing;
+	var sales volume;
+	output out=ds_&nm. (drop=_:) sum(sales)=sales_&nm. sum(volume)=volume_&nm.;
+	run;
+
+%mend cl;
+%cl(where source_dist le 200,l200);
+%cl(where source_dist le 300,l300);
+%cl(where source_dist > 300,g300);
+%cl(where plantnme ne "",total);
+
+data out.spec7_furthest_radii;
+	format plantnme year furthest_distance furtherest_sales furthest_volume volume_share_l200 sales_share_l200 volume_share_l300 sales_share_l300 volume_share_g300 sales_share_g300;
+	merge relevant_area_further (in=a) ds_l200 ds_l300 ds_g300 ds_total;
+	by plantnme year;
+	if a;
+	sales_share_l200=sales_l200/sales_total;
+	sales_share_l300=sales_l300/sales_total;
+	sales_share_g300=sales_g300/sales_total;
+	volume_share_l200=volume_l200/volume_total;
+	volume_share_l300=volume_l300/volume_total;
+	volume_share_g300=volume_g300/volume_total;
+	run;
+
+
+data _null_;
+	set  out.spec7_furthest_radii;
+	by plantnme year;
+	file "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out\spec7_furthest_radii.xls" delimiter = '09'x lrecl = 32767;
+	if first.plantnme then do;
+	put plantnme;
+	put year '09'x furthest_distance furtherest_sales furthest_volume '09'x volume_share_l200 sales_share_l200 volume_share_l300 sales_share_l300 volume_share_g300 sales_share_g300;
+	end;
+	else put year '09'x furthest_distance furtherest_sales furthest_volume '09'x volume_share_l200 sales_share_l200 volume_share_l300 sales_share_l300 volume_share_g300 sales_share_g300;
+		run;
