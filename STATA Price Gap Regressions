@@ -1,0 +1,524 @@
+*set up regression data for dap exports 
+* using fertecon prices
+
+**********************************************************************************************************
+set more off 
+local base "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\stata\"
+local data "`base'data\"
+local statadata "`base'statadata\"
+local comm "F:\Competition\PBoberg19300.00-LEE\Downloads\Commodities (2013-10-07)\"
+local raw "`base'raw\"
+local regout "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Price Correlations\TES\ouput\"
+local tmp "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Price Correlations\TES\tmp\"
+**********************************************************************************************************
+
+cd "`data'"
+import excel using "freight_prices.xlsx", sheet("Fertecon") firstrow clear 
+rename Date date 
+format date %td 
+sort date
+tempfile freight_prices_raw
+save `freight_prices_raw'
+
+****************************************************************
+
+*import fw dap price data 
+cd "`data'"
+insheet using "dap_fw.csv", comma names clear 
+local convert = 1.10231
+replace week = subinstr(week, "-", "", .)
+ds, has(type numeric)
+local vars `r(varlist)'
+gen date = date(week, "DMY")
+foreach var of varlist `vars' {
+  replace `var' = `var'*`convert'
+  replace `var' =  . if `var' == 0 
+}
+foreach var of varlist `vars' {
+  rename `var' fw_`var'
+}
+tempfile fw_dap_prices
+format date %td 
+sort date
+save `fw_dap_prices'
+
+
+cd "`data'"
+insheet using "dap_fertecon.csv", comma names clear 
+local convert = 1.10231
+replace week = subinstr(week, "-", "", .)
+ds, has(type numeric)
+local vars `r(varlist)'
+gen date = date(week, "DMY")
+foreach var of varlist `vars' {
+  *replace `var' = `var'/`convert'
+  replace `var' =  . if `var' == 0 
+}
+foreach var of varlist `vars' {
+  rename `var' f_`var'
+}
+replace units = "ST"
+tempfile f_dap_prices
+format date %td 
+sort date
+save `f_dap_prices'
+
+import excel using "F:\Competition\PBoberg19300.00-LEE\Downloads\Commodities (2013-10-07)\commodities (weekly).xlsx", firstrow clear 
+rename DATE date 
+rename PHOS_ROC phos_rock
+rename US_NAT_G us_nat_gas
+rename SULPHUR sulphur 
+replace phos_rock = "" if phos_rock == "."
+replace sulphur = "" if sulphur == "."
+destring phos_rock, replace
+destring sulphur, replace 
+format date %td 
+drop WEEK 
+sort date 
+tempfile weekly_comm
+save `weekly_comm'
+
+local convert = 1.10231
+import excel using "F:\Competition\PBoberg19300.00-LEE\Downloads\Commodities (2013-10-07)\ammonia_ts.xlsx", sheet("ammonia") firstrow clear 
+keep date black_sea 
+rename black_sea ammonia_blacksea // in metric tons 
+replace ammonia_blacksea = ammonia_blacksea/`convert'
+replace date = date + 3
+tempfile ammonia_blacksea
+drop if date == . 
+sort date 
+save `ammonia_blacksea'
+
+import excel using "F:\Competition\PBoberg19300.00-LEE\Downloads\Commodities (2013-10-07)\ammonia_ts.xlsx", sheet("ammonia") firstrow clear 
+keep C us_gulf
+rename us_gulf ammonia_usgulf // in short tons 
+rename C date 
+drop if date == . 
+replace date = date + 3 
+sort date 
+tempfile ammonia_usgulf
+save `ammonia_usgulf'
+
+
+import excel using "F:\Competition\PBoberg19300.00-LEE\Downloads\Commodities (2013-10-07)\ammonia_ts.xlsx", sheet("ammonia") firstrow clear 
+keep E	tampa
+rename tampa ammonia_tampa // in metric tons 
+replace ammonia_tampa = ammonia_tampa/`convert'
+rename E date 
+drop if date == . 
+replace date = date + 3 
+sort date 
+tempfile ammonia_tampa
+save `ammonia_tampa'
+
+**********************************************************************************************************
+*MERGE EVERYTHING TOGETHER 
+
+use `fw_dap_prices'
+sort date
+
+merge 1:1 date using `f_dap_prices'
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 date using `weekly_comm'
+drop if _merge == 2 
+drop _merge  
+
+merge 1:1 date using `freight_prices_raw'
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 date using `ammonia_usgulf' 
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 date using `ammonia_tampa' 
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 date using `ammonia_blacksea' 
+drop if _merge == 2 
+drop _merge 
+
+
+**************************************************************
+*******            Regressions            ********************
+**************************************************************
+sort date 
+
+rename f_us_gulf f_usgulf
+gen l_f_usgulf = log(f_usgulf)
+gen l_f_baltic = log(f_baltic)
+gen l_f_black_sea = log(f_black_sea)
+gen l_f_china = log(f_china)
+gen l_f_jordan = log(f_jordan)
+gen l_f_morocco = log(f_morocco) 
+gen l_f_saudi_arabia = log(f_saudi_arabia)
+gen l_f_tunisia = log(f_tunisia)
+
+rename fw_us_gulf_tampa fw_usgulf 
+rename fw_north_africa fw_nafrica 
+gen l_fw_usgulf = log(fw_usgulf)
+gen l_fw_black_sea = log(fw_black_sea)
+gen l_fw_china = log(fw_china)
+gen l_fw_jordan = log(fw_jordan)
+gen l_fw_nafrica = log(fw_nafrica)
+
+gen l_phos_rock = log(phos_rock)
+gen l_us_nat_gas = log(us_nat_gas)
+gen l_sulphur = log(sulphur)
+gen l_ammonia_usgulf = log(ammonia_usgulf)
+gen l_ammonia_blacksea = log(ammonia_blacksea)
+
+gen l_usgulf_india = log(USGULF_INDIA)
+gen l_usgulf_china = log(USGULF_CHINA)
+gen l_usgulf_pakistan = log(USGULF_PAKISTAN)
+gen l_usgulf_samericaec = log(USGULF_SAMERICAEC)
+gen l_baltic_samericaec = log(BALTIC_SAMERICAEC)
+gen l_nafrica_seurope = log(NAFRICA_SEUROPE)
+gen l_jordan_india = log(JORDAN_INDIA)
+gen l_nafrica_india = log(NORTHAFRICA_INDIA)
+
+gen usgulf_india = USGULF_INDIA
+gen usgulf_china = USGULF_CHINA
+gen usgulf_pakistan = USGULF_PAKISTAN
+gen usgulf_samericaec = USGULF_SAMERICAEC
+gen baltic_samericaec = BALTIC_SAMERICAEC
+gen nafrica_seurope = NAFRICA_SEUROPE
+gen jordan_india = JORDAN_INDIA
+gen nafrica_india = NORTHAFRICA_INDIA
+
+gen gap_f_baltic = f_usgulf - f_baltic 
+gen gap_f_black_sea = f_usgulf - f_black_sea
+gen gap_f_china = f_usgulf - f_china
+gen gap_f_jordan = f_usgulf - f_jordan
+gen gap_f_morocco = f_usgulf - f_morocco 
+gen gap_f_saudi_arabia = f_usgulf - f_saudi_arabia
+gen gap_f_tunisia = f_usgulf - f_tunisia
+
+gen gap_fw_black_sea = fw_usgulf - fw_black_sea
+gen gap_fw_china = fw_usgulf - fw_china
+gen gap_fw_jordan = fw_usgulf - fw_jordan
+gen gap_fw_nafrica = fw_usgulf - fw_nafrica
+
+gen l_gap_f_baltic = l_f_usgulf - l_f_baltic 
+gen l_gap_f_black_sea = l_f_usgulf - l_f_black_sea
+gen l_gap_f_china = l_f_usgulf - l_f_china
+gen l_gap_f_jordan = l_f_usgulf - l_f_jordan
+gen l_gap_f_morocco = l_f_usgulf - l_f_morocco 
+gen l_gap_f_saudi_arabia = l_f_usgulf - l_f_saudi_arabia
+gen l_gap_f_tunisia = l_f_usgulf - l_f_tunisia
+
+gen l_gap_fw_black_sea = l_fw_usgulf - l_fw_black_sea
+gen l_gap_fw_china = l_fw_usgulf - l_fw_china
+gen l_gap_fw_jordan = l_fw_usgulf - l_fw_jordan
+gen l_gap_fw_nafrica = l_fw_usgulf - l_fw_nafrica
+
+gen month = month(date)
+gen day = day(date)
+gen month_adjust = month - 1 if (day == 1 | day == 2 | day == 3) & month != 1  
+replace month_adjust = 12 if (day == 1 | day == 2 | day == 3) & month == 1
+replace month = month_adjust if (day == 1 | day == 2 | day == 3)
+qui tab month, gen(m_)
+
+gen t = _n
+tsset t 
+
+cd "`tmp'"
+save regression, replace 
+
+
+*************************************************************************************
+
+*linear table 7 
+tempname memhold 
+postfile `memhold' str20 rhs_var reg_coefficient p using "`regout'linear_pricegap.dta", replace 
+
+cd "`tmp'"
+use regression, clear 
+
+reg gap_f_baltic L.gap_f_baltic usgulf_samericaec baltic_samericaec phos_rock us_nat_gas sulphur ammonia_usgulf ammonia_blacksea L1.ammonia_usgulf L1.ammonia_blacksea  ///
+L.usgulf_samericaec L.baltic_samericaec L.phos_rock L.us_nat_gas L.sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.gap_f_baltic]
+local coef = _b[L.gap_f_baltic]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.gap_f_baltic") (`coef') (`p')
+
+reg gap_f_black_sea L.gap_f_black_sea usgulf_samericaec baltic_samericaec phos_rock us_nat_gas sulphur ammonia_usgulf ammonia_blacksea L1.ammonia_usgulf L1.ammonia_blacksea  ///
+L.usgulf_samericaec L.baltic_samericaec L.phos_rock L.us_nat_gas L.sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.gap_f_black_sea]
+local coef = _b[L.gap_f_black_sea]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.gap_f_black_sea") (`coef') (`p')
+
+reg gap_f_china L.gap_f_china usgulf_china phos_rock us_nat_gas sulphur ammonia_usgulf ammonia_blacksea L1.ammonia_usgulf L1.ammonia_blacksea  ///
+L.usgulf_china L.phos_rock L.us_nat_gas L.sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.gap_f_china]
+local coef = _b[L.gap_f_china]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.gap_f_china") (`coef') (`p')
+
+reg gap_f_jordan L.gap_f_jordan usgulf_india jordan_india phos_rock us_nat_gas sulphur ammonia_usgulf ammonia_blacksea L1.ammonia_usgulf L1.ammonia_blacksea  /// 
+L.usgulf_india L.jordan_india L.phos_rock L.us_nat_gas L.sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.gap_f_jordan]
+local coef = _b[L.gap_f_jordan]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.gap_f_jordan") (`coef') (`p')
+
+reg gap_f_morocco L.gap_f_morocco usgulf_india nafrica_india phos_rock us_nat_gas sulphur ammonia_usgulf ammonia_blacksea L1.ammonia_usgulf L1.ammonia_blacksea  ///
+L.usgulf_india L.nafrica_india L.phos_rock L.us_nat_gas L.sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.gap_f_morocco]
+local coef = _b[L.gap_f_morocco]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.gap_f_morocco") (`coef') (`p')
+
+reg gap_f_saudi_arabia L.gap_f_saudi_arabia usgulf_india jordan_india phos_rock us_nat_gas sulphur ammonia_usgulf ammonia_blacksea L1.ammonia_usgulf L1.ammonia_blacksea  ///
+L.usgulf_india L.jordan_india L.phos_rock L.us_nat_gas L.sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.gap_f_saudi_arabia]
+local coef = _b[L.gap_f_saudi_arabia]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.gap_f_saudi_arabia") (`coef') (`p')
+
+reg gap_f_tunisia L.gap_f_tunisia usgulf_india nafrica_india phos_rock us_nat_gas sulphur ammonia_usgulf ammonia_blacksea L1.ammonia_usgulf L1.ammonia_blacksea  /// 
+L.usgulf_india L.nafrica_india L.phos_rock L.us_nat_gas L.sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.gap_f_tunisia]
+local coef = _b[L.gap_f_tunisia]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.gap_f_tunisia") (`coef') (`p')
+
+reg gap_fw_black_sea L.gap_fw_black_sea usgulf_samericaec baltic_samericaec phos_rock us_nat_gas sulphur  ammonia_usgulf ammonia_blacksea L1.ammonia_usgulf L1.ammonia_blacksea  /// 
+ L.usgulf_samericaec L.baltic_samericaec L.phos_rock L.us_nat_gas L.sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.gap_fw_black_sea]
+local coef = _b[L.gap_fw_black_sea]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.gap_fw_black_sea") (`coef') (`p')
+
+reg gap_fw_china L.gap_fw_china usgulf_china phos_rock us_nat_gas sulphur ammonia_usgulf ammonia_blacksea L1.ammonia_usgulf L1.ammonia_blacksea  /// 
+ L.usgulf_china L.phos_rock L.us_nat_gas L.sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.gap_fw_china]
+local coef = _b[L.gap_fw_china]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.gap_fw_china") (`coef') (`p')
+
+/*
+
+reg gap_fw_jordan L.gap_fw_jordan usgulf_india jordan_india phos_rock us_nat_gas sulphur ammonia_usgulf ammonia_blacksea L1.ammonia_usgulf L1.ammonia_blacksea  /// 
+L.usgulf_india L.jordan_india L.phos_rock L.us_nat_gas L.sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.gap_fw_jordan]
+local coef = _b[L.gap_fw_jordan]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.gap_fw_jordan") (`coef') (`p')
+
+reg gap_fw_nafrica L.gap_fw_nafrica usgulf_india nafrica_india phos_rock us_nat_gas sulphur  ammonia_usgulf ammonia_blacksea L1.ammonia_usgulf L1.ammonia_blacksea /// 
+L.usgulf_india L.nafrica_india L.phos_rock L.us_nat_gas L.sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.gap_fw_nafrica]
+local coef = _b[L.gap_fw_nafrica]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.gap_fw_nafrica") (`coef') (`p')
+
+postclose `memhold'
+
+
+cd "`regout'"
+use linear_pricegap, clear 
+gen s_reg_coefficient = string(reg_coefficient)
+replace s_reg_coefficient = substr(s_reg_coefficient, 1, 4) 
+replace s_reg_coefficient = s_reg_coefficient + "***" if p < .01 
+replace s_reg_coefficient = s_reg_coefficient + "**" if p < .05 & p >= .01 
+replace s_reg_coefficient = s_reg_coefficient + "*" if p < .1 & p >=.05
+gen t_5 = ln(.001/.05)/ln(reg_coefficient)
+keep rhs_var s_reg_coefficient t_5
+save linear_pricegap, replace 
+
+*************************************************************************************
+*log table 7 
+
+tempname memhold 
+postfile `memhold' str20 rhs_var reg_coefficient p using "`regout'log_pricegap.dta", replace 
+
+cd "`tmp'"
+use regression, clear 
+
+reg l_gap_f_baltic L.l_gap_f_baltic l_usgulf_samericaec l_baltic_samericaec l_phos_rock l_us_nat_gas l_sulphur ///
+L.l_usgulf_samericaec L.l_baltic_samericaec L.l_phos_rock L.l_us_nat_gas L.l_sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.l_gap_f_baltic]
+local coef = _b[L.l_gap_f_baltic]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.l_gap_f_baltic") (`coef') (`p') 
+
+
+reg l_gap_f_black_sea L.l_gap_f_black_sea l_usgulf_samericaec l_baltic_samericaec l_phos_rock l_us_nat_gas l_sulphur l_ammonia_usgulf l_ammonia_blacksea L1.l_ammonia_usgulf L1.l_ammonia_blacksea  ///
+L.l_usgulf_samericaec L.l_baltic_samericaec L.l_phos_rock L.l_us_nat_gas L.l_sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.l_gap_f_black_sea]
+local coef = _b[L.l_gap_f_black_sea]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.l_gap_f_black_sea") (`coef') (`p')
+
+reg l_gap_f_china L.l_gap_f_china l_usgulf_china  l_phos_rock l_us_nat_gas l_sulphur l_ammonia_usgulf l_ammonia_blacksea L1.l_ammonia_usgulf L1.l_ammonia_blacksea   ///
+L.l_usgulf_china L.l_phos_rock L.l_us_nat_gas L.l_sulphur L.l_usgulf_china L.l_phos_rock L.l_us_nat_gas L.l_sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.l_gap_f_china]
+local coef = _b[L.l_gap_f_china]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.l_gap_f_china") (`coef') (`p')
+
+reg l_gap_f_jordan L.l_gap_f_jordan l_usgulf_india l_jordan_india l_phos_rock l_us_nat_gas l_sulphur  l_ammonia_usgulf l_ammonia_blacksea L1.l_ammonia_usgulf L1.l_ammonia_blacksea  /// 
+L.l_usgulf_india L.l_jordan_india L.l_phos_rock L.l_us_nat_gas L.l_sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.l_gap_f_jordan]
+local coef = _b[L.l_gap_f_jordan]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.l_gap_f_jordan") (`coef') (`p')
+
+reg l_gap_f_morocco L.l_gap_f_morocco l_usgulf_india l_nafrica_india l_phos_rock l_us_nat_gas l_sulphur  l_ammonia_usgulf l_ammonia_blacksea L1.l_ammonia_usgulf L1.l_ammonia_blacksea  ///
+L.l_usgulf_india L.l_nafrica_india L.l_phos_rock L.l_us_nat_gas L.l_sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.l_gap_f_morocco]
+local coef = _b[L.l_gap_f_morocco]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.l_gap_f_morocco") (`coef') (`p')
+
+reg l_gap_f_saudi_arabia L.l_gap_f_saudi_arabia l_usgulf_india l_jordan_india l_phos_rock l_us_nat_gas l_sulphur  l_ammonia_usgulf l_ammonia_blacksea L1.l_ammonia_usgulf L1.l_ammonia_blacksea  ///
+L.l_usgulf_india L.l_jordan_india L.l_phos_rock L.l_us_nat_gas L.l_sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.l_gap_f_saudi_arabia]
+local coef = _b[L.l_gap_f_saudi_arabia]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.l_gap_f_saudi_arabia") (`coef') (`p')
+
+reg l_gap_f_tunisia L.l_gap_f_tunisia l_usgulf_india l_nafrica_india l_phos_rock l_us_nat_gas l_sulphur  l_ammonia_usgulf l_ammonia_blacksea L1.l_ammonia_usgulf L1.l_ammonia_blacksea  /// 
+L.l_usgulf_india L.l_nafrica_india L.l_phos_rock L.l_us_nat_gas L.l_sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.l_gap_f_tunisia]
+local coef = _b[L.l_gap_f_tunisia]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.l_gap_f_tunisia") (`coef') (`p')
+
+reg l_gap_fw_black_sea L.l_gap_fw_black_sea l_usgulf_samericaec l_baltic_samericaec l_phos_rock l_us_nat_gas l_sulphur   l_ammonia_usgulf l_ammonia_blacksea L1.l_ammonia_usgulf L1.l_ammonia_blacksea  /// 
+ L.l_usgulf_samericaec L.l_baltic_samericaec L.l_phos_rock L.l_us_nat_gas L.l_sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.l_gap_fw_black_sea]
+local coef = _b[L.l_gap_fw_black_sea]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.l_gap_fw_black_sea") (`coef') (`p')
+
+reg l_gap_fw_china L.l_gap_fw_china l_usgulf_china l_phos_rock l_us_nat_gas l_sulphur  l_ammonia_usgulf l_ammonia_blacksea L1.l_ammonia_usgulf L1.l_ammonia_blacksea  /// 
+ L.l_usgulf_china L.l_phos_rock L.l_us_nat_gas L.l_sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.l_gap_fw_china]
+local coef = _b[L.l_gap_fw_china]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.l_gap_fw_china") (`coef') (`p')
+
+reg l_gap_fw_jordan L.l_gap_fw_jordan l_usgulf_india l_jordan_india l_phos_rock l_us_nat_gas l_sulphur  l_ammonia_usgulf l_ammonia_blacksea L1.l_ammonia_usgulf L1.l_ammonia_blacksea  /// 
+L.l_usgulf_india L.l_jordan_india L.l_phos_rock L.l_us_nat_gas L.l_sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.l_gap_fw_jordan]
+local coef = _b[L.l_gap_fw_jordan]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.l_gap_fw_jordan") (`coef') (`p')
+
+reg l_gap_fw_nafrica L.l_gap_fw_nafrica l_usgulf_india l_nafrica_india l_phos_rock l_us_nat_gas l_sulphur  l_ammonia_usgulf l_ammonia_blacksea L1.l_ammonia_usgulf L1.l_ammonia_blacksea  /// 
+L.l_usgulf_india L.l_nafrica_india L.l_phos_rock L.l_us_nat_gas L.l_sulphur m_*
+local df = `e(df_r)'
+local se = _se[L.l_gap_fw_nafrica]
+local coef = _b[L.l_gap_fw_nafrica]
+local t = `coef'/`se'
+local p  = 2*ttail(e(df_r), abs(`t'))
+local ic = sqrt((`t'*`t')/((`t'*`t') + `df'))
+di "`ic'"
+post `memhold' ("L.l_gap_fw_nafrica") (`coef') (`p')
+
+/*
+
+postclose `memhold'
+
+cd "`regout'"
+use log_pricegap, clear 
+gen s_reg_coefficient = string(reg_coefficient)
+replace s_reg_coefficient = substr(s_reg_coefficient, 1, 4) 
+replace s_reg_coefficient = s_reg_coefficient + "***" if p < .01 
+replace s_reg_coefficient = s_reg_coefficient + "**" if p < .05 & p >= .01 
+replace s_reg_coefficient = s_reg_coefficient + "*" if p < .1 & p >=.05
+gen t_5 = ln(.001/.05)/ln(reg_coefficient)
+keep rhs_var s_reg_coefficient t_5
+save log_pricegap, replace 
+
+****************************************************************************
