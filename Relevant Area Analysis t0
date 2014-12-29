@@ -1,0 +1,416 @@
+libname use "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use";
+libname out "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out";
+libname data "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\data";
+libname raw "\\bosproject\Proj\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\Caraustar Plant Sales Data\Raw Data (2014-09-04)";
+
+		*********SPEC 7******************;
+
+data use.plant_data_spec7 (compress=yes);
+	set use.sales_detail_v3;
+
+****internal sales***;
+
+	if index(upcase(CMNAME),"CSAR")>0 or index(upcase(ABALPH),"CSAR")>0 or index(upcase(CMNAME),"CARAUSTAR")>0 then internal=1;
+	else if index(upcase(strip(CMNAME)),"AUSTELL BOX BOARD CORP")>0 then internal=1;  
+	else if index(upcase(CMNAME),"SWEETWATER")>0 then internal=1;
+	else internal=0;
+
+	if strip(upcase(CMNAME)) in ("AUSTELL BOX BOARD CORP.#2" "CARAUSTAR" "CARAUSTAR - TAMA PAPERBOARD"
+"CARAUSTAR INDUSTRIES" "CARAUSTAR TACOMA" "CAROTELL PAPER" "CAROTELL PAPER BOARD" "CSAR MILL CAROTELL PAPERBOARD" "SWEETWATER PAPERBOARD")
+& catdesc="SPIRAL TUBE" then internal_v2=1;
+else internal_v2=0;
+
+
+	***resales***;
+
+if upcase(strip(catcode)) in ("PA", "TS", "TY", "TO", "TK", "TC", "TF", "TR", "TU", "FC") then resale=0;
+	else resale=1; 
+
+**deletions***;
+
+	if upcase(strip(CATDESC)) in ("PAB DIRECT MATERIAL - PAPERBOARD" "PROTECT-A-BOARD") then delete;
+	if index(upcase(plantnme),"PAB")>0 then delete;
+	if upcase(strip(catcode)) not in ("FC" "KS" "RC" "TC" "TF" "TK" "TO" "TR" "TS" "TU" "TY" "CC") then delete;
+
+****geo deletes*****;
+	if upcase(strip(plantnme)) in ("AUGUSTA" "ASHEVILLE" "LELAND" "ROGERSVILLE" "WEYERS CAVE") then source_del=1;
+	else source_del=0;
+
+	format country $28.;
+	country="USA";
+	if strip(upcase(stateid)) in ("BC" "AB" "SK" "ON" "QC" "NB" "NS" "PE" "PEI" "MB" "NL") then country="Canada";
+	if strip(upcase(stateid))="99" & upcase(strip(smcity)) in ("FREEPORT BAHAMAS" "HORSHAM, WEST SUSSEX" "WEST MIDLANDS, UK  B240RB") then country="International";
+	if index(strip(upcase(shzip)),"INT")>0 then country="International";
+	if upcase(strip(smcity)) in ("UNITED KINGDOM" "WEST MIDLANDS, UK  B240RB" "FREEPORT BAHAMAS") & shzip in ("B24 0RB" "B240RB") then country="International";
+	if upcase(strip(smcity)) in ("FREEPORT BAHAMAS") then country="International";
+	if strip(upcase(stateid))="99" & upcase(strip(smcity)) in ("QUEBEC" "NIAGRA FALLS ON") then do;
+			country="Canada";
+			if upcase(strip(smcity)) in ("QUEBEC") then stateid="QC";
+			if upcase(strip(smcity)) in ("NIAGRA FALLS ON") then stateid="ON";
+			end;
+
+	if country="USA" & anyalpha(shzip) >0 then country="Canada";
+	if upcase(strip(cmname))="ANIXTER FASTENERS" then do;
+			country="International";
+			shzip="PE2 6TE";
+			end;
+	if upcase(strip(cmname))="CEMEX" then do;
+			country="USA";
+			stateid="FL";
+			end;
+	if upcase(strip(cmname))="FLOREX EXPLOSIVES" then country="USA";
+	if index(upcase(shzip),"UNKNO")>0 & upcase(strip(stateid)) in ("FL" "AZ" "IL") then country="USA";
+
+***fix zip codes***;
+
+if strip(shzip)="85222" then shzip="85122";
+if strip(shzip)="85223" then shzip="85249";
+
+if strip(shzip)="24112" then stateid="VA";
+if strip(shzip)="28273" then stateid="NC";
+if strip(shzip)="41056" then stateid="KY";
+if strip(shzip)="53233" then stateid="WI";
+
+format zip $9.;
+format customer_name $200.;
+format address $200.;
+
+if index(strip(shzip),"-")>0 or index(strip(shzip),"|")>0 then zip=substr(strip(shzip),1,5);
+else zip=strip(shzip);
+
+smcity=upcase(strip(smcity));
+customer_name=strip(MAPA8)||"**"||upcase(strip(ABALPH));
+if upcase(strip(zip))='2409' then zip='27409';
+if upcase(strip(zip))='M1P2Y7' then zip='M1P 2Y7';
+if upcase(strip(zip))='L6Y5A4' then zip='L6Y 5A4';
+if upcase(strip(zip))='V4W2R1' then zip='V4W 2R1';
+if upcase(strip(zip))='L6Y5A4' then zip='L6Y 5A4';
+if upcase(strip(zip))='M8Z5L4' then zip='M8Z 5L4';
+if upcase(strip(zip))='H4C  1V9' then zip='H4C 1V9';
+if upcase(strip(zip))='H7S  1B1' then zip='H7S 1B1';
+if upcase(strip(zip))='K0C  1P0' then zip='K0C 1P0';
+if upcase(strip(zip))='K0H  1S0' then zip='K0H 1S0';
+if upcase(strip(zip))='K8N  5A2' then zip='K8N 5A2';
+if upcase(strip(zip))='K8V  6G7' then zip='K8V 6G7';
+if upcase(strip(zip))='L5T  1W1' then zip='L5T 1W1';
+if upcase(strip(zip))='L6T  3V1' then zip='L6T 3V1';
+if upcase(strip(zip))='M9W  5T1' then zip='M9W 5T1';
+if upcase(strip(zip))='QC G2C' then do;
+	stateid='QC';
+	zip='G2C 2E2';
+	end;
+if upcase(strip(zip)) in ('K8V-5R8' 'K8V-5') then zip='K8V 5R8';
+if upcase(strip(zip))='B240RB' then zip='B24 0RB';
+if upcase(strip(zip))='K6V  6K4' then zip='K6V 6K4';
+if upcase(strip(zip))='K7K  4Z6' then zip='K7K 4Z6';
+if upcase(strip(zip))='L5T1V6' then zip='L5T 1V6';
+if upcase(strip(zip))='L6T' then zip='L6T 3V1';
+
+address=upcase(strip(smcity))||", "||strip(upcase(STATEID))||" "||strip(upcase(zip))||" "||strip(country);
+
+********fix paper desctiption****;
+if strip(papercd)=".221" then PAPERDES="ERROR";
+if strip(papercd)="0" then PAPERDES="ERROR";
+if upcase(strip(papercd)) in ("1`" "100" "U100" "D" "S" "J" "C" "X") then PAPERDES="ULTRA 100";
+if upcase(strip(papercd))="K" then PAPERDES="KRAFT";
+if upcase(strip(papercd)) in ("O" "Y" "W") then PAPERDES="ODDLOT";
+if upcase(strip(papercd))="R" then PAPERDES="ULTRA 200";
+if upcase(strip(papercd))="F" then PAPERDES="FORMING BOARD";
+if strip(papercd)="" or strip(PAPERDES)="" then PAPERDES="OTHER";
+
+address=upcase(strip(address));
+customer_name=upcase(strip(ABALPH));
+
+
+if address="BRAMPTON, ON L6T  3V1 CANADA" then address="BRAMPTON, ON L6T 3V1 CANADA";
+if upcase(address) in ("WEST MIDLANDS, UK  B240RB,  B24 0RB INTERNATIONAL" "FREEPORT BAHAMAS,  84127 USA") then country="International";
+
+run;
+*********COLLAPSE***********************;
+
+proc means data= use.plant_data_spec7 nway noprint;
+	where internal=0 & (strip(endusdsc)) not in ("ADHESIVE" "MISCELLANEOUS NON-TUBE PRODUCTS" "LAYFLAT TUBING" "PLUGS" "ROLL HEADERS" "END CAPS") ;
+	class plantnme endusdsc year address /missing;
+	var extndprc weights;
+	output out=plnm_year_zip (drop=_:)  sum(extndprc)=sales sum(weights)=volume;
+	run;
+
+data plnm_year_zip;
+	set plnm_year_zip ;
+	plantnme=upcase(strip(plantnme));
+if plantnme="KERNERSVILLE TUBE" then plantnme="KERNERSVILLE";
+if plantnme="TACOMA TUBE" then plantnme="TACOMA";
+run;
+
+proc sort data=plnm_year_zip;
+	by plantnme;
+	run;
+
+
+proc import datafile="F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\data\IPG Locations.xlsx"
+	out=comp_locations dbms=excel replace;
+	run;
+
+
+proc sort data=comp_locations (keep=company city lat lon rename=(city=plantnme lat=source_lat lon=source_lon)) out=plantnme;
+	where upcase(strip(company))="CARAUSTAR";
+	by plantnme;
+	run;
+
+data plantnme;
+	set plantnme;
+	plantnme=upcase(strip(plantnme));
+run;
+
+data plnm_year_lats;
+	merge plnm_year_zip (in=a) plantnme (in=b);
+	by plantnme;
+	if a;
+	if upcase(strip(plantnme))="ROGERSVILLE" then do;
+	source_lat=34.825585;
+	source_lon=-87.294645;
+	end;
+	if upcase(strip(plantnme)) in ("ASHEVILLE" "ASHVILLE") then do;
+	source_lat=35.490922;
+	source_lon=-82.520855;
+	end;
+	if upcase(strip(plantnme))="AUGUSTA" then do;****1414 Hayes Dr, Augusta, GA 30901;
+	source_lat=33.453234;
+	source_lon=-81.939668;
+	end;
+	if upcase(strip(plantnme))="WEYERS CAVE" then do;
+	source_lat=38.276844;
+	source_lon=-78.925465;
+	end;
+	if upcase(strip(plantnme))="LELAND" then do;*2210 MERCANTILE DR LELAND,  NC  28451;
+	source_lat=34.265085;
+	source_lon=-78.060172;
+	end;	
+if upcase(strip(plantnme))="MCGEHEE" then do;**annie 10/15**;;
+	source_lat=33.62552;
+	source_lon=-91.3946;
+	end;
+if address in ("UNITED KINGDOM,  B24 0RB INTERNATIONAL" "WEST MIDLANDS, UK  B240RB,  INTERNATI INTERNATIONAL")
+	then address="WEST MIDLANDS, UK  B240RB,  B24 0RB INTERNATIONAL";
+if upcase(address) in ("WEST MIDLANDS, UK  B240RB,  B24 0RB INTERNATIONAL" "FREEPORT BAHAMAS,  84127 USA") then country="International";
+
+	run;
+
+**********MERGE ON CUSTOMER LATS AND LONGS*******;
+
+data cust_lat_lon (keep=address cust_lat cust_lon);
+	infile "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\data\Customer Locations Geocoded_v3.csv"
+	delimiter="," missover dsd lrecl=30000 firstobs=2;
+	informat address $60. ; format address $60. ;
+	informat found_address $60. ; format found_address $60. ;
+	informat cust_lat best32. ; format cust_lat best32. ;
+	informat cust_lon best32. ; format cust_lon best32. ;
+	informat number best12.; format number best32.;
+	informat status $20.; format status $20.;
+	informat type $20. ; format type $20. ;
+	informat quality $16. ; format quality $16. ;
+
+	input address $ found_address $ cust_lat cust_lon number status $ type $ quality $ ;
+
+address=upcase(strip(address)); 
+if address in ("UNITED KINGDOM,  B24 0RB INTERNATIONAL" "WEST MIDLANDS, UK  B240RB,  INTERNATI INTERNATIONAL")
+	then address="WEST MIDLANDS, UK  B240RB,  B24 0RB INTERNATIONAL";
+	run;
+
+	***USE SAS LATS AND LONS ***;
+
+proc sort data=cust_lat_lon;
+	by address;
+	run;
+
+proc sort data=plnm_year_lats;
+	by address;
+	run;
+
+proc sort data=plnm_year_lats2;
+	by cust_lat;
+	run;
+
+data plnm_year_lats2;
+	merge plnm_year_lats (in=a) cust_lat_lon (in=b);
+	by address;
+	if a ;
+	if upcase(address) in ("WEST MIDLANDS, UK  B240RB,  B24 0RB INTERNATIONAL" "FREEPORT BAHAMAS,  84127 USA") then country="International";
+	if address="ESPLANADE GOLF & COUNTRY CLUB JOB, FL 34429 USA" then do;
+	 cust_lat=28.870038;
+	cust_lon=-82.669947;
+	end;
+	if address="CAMBS,  PE2 6TE INTERNATIONAL" then do;
+	cust_lat=52.540834;
+	cust_lon=-0.3085135;
+	end;
+	if address="GRAND BAHAMAS,  INTL INTERNATIONAL" then do;
+	cust_lat=31.8005125;
+	cust_lon=-106.285853;
+	end;
+	if address="HEADINGLY, MB UNKNOWN CANADA" then do;
+	cust_lat=49.8823523;
+	cust_lon=-97.3696008;
+	end;
+	if address="SILAO, GT INTERNATI INTERNATIONAL" then do;
+	cust_lat=20.947778;
+	cust_lon=-101.428056;
+	end;
+	if address="FREEPORT BAHAMAS,  84127 INTERNATIONAL" then do;
+	cust_lat=26.53252;
+	cust_lon=-78.7756;
+	end;
+	run;
+
+**********************TO STATA FOR VINCENTY*************************;
+
+proc export data=plnm_year_lats2
+	outfile="F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use\plnm_year_lats_4stata_v2.dta"
+	dbms=dta replace;
+	run;
+
+	***********************VINCENTY*****************************;
+
+proc import datafile="F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\use\plnm_year_lats_4sas_v2.dta"
+	out=plnm_year_lats_4sas_v2 dbms=dta replace;
+	run;
+
+data plnm_year_lats_4sas_v2;
+	set plnm_year_lats_4sas_v2;
+		if source_dist=. & (abs(cust_lat-source_lat) <0.001 ) & (abs(cust_lon-source_lon)<0.001) then source_dist=0;
+*	else if source_dist=. then delete;
+if address="ESPLANADE GOLF & COUNTRY CLUB JOB, FL 34429 USA" then do;
+ cust_lat=28.870038;
+cust_lon=-82.669947;
+end;
+if address in ("BAYAMON, PR 00956 USA") then country="INTERNATIONAL";
+	tons=volume/2000;
+	country=scan(address,-1," ");
+	run;
+
+proc means data=plnm_year_lats_4sas_v2 nway noprint;
+	class plantnme endusdsc year source_dist country /missing;
+	var sales tons;
+	output out=plnm_year_lats_collapse (drop=_:) sum=;
+	run;
+
+proc sort data=plnm_year_lats_collapse ;
+	by plantnme endusdsc year descending source_dist;
+	run;
+
+****find furthest shipment***;
+
+proc sort data=plnm_year_lats_collapse out=plnm_year_lats;
+	where source_dist ne . & upcase(country) in ("CANADA" "USA" "INTERNATIONAL");
+	by plantnme endusdsc year descending source_dist;
+	run;
+
+data parta_furthest_all;
+	set plnm_year_lats;
+	by plantnme endusdsc year descending source_dist;
+	if first.year;
+
+%macro yr(yr);
+
+	if year=&yr. then do;
+	far_distance_&yr.=source_dist;
+	far_sales_&yr.=sales;
+	far_tons_&yr.=tons;
+	end;
+
+%mend yr;
+%yr(2011);
+%yr(2012);
+%yr(2013);
+%yr(2014);
+
+	run;
+
+proc means data=parta_furthest_all nway noprint;
+	class plantnme endusdsc /missing;;
+	var far:;
+	output  out=out.spec7_parta_furthest_all (drop=_:) max=;
+run;
+
+data _null_;
+	set  out.spec7_parta_furthest_all (where=(endusdsc ne " "));
+	by plantnme endusdsc;
+	file "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out\spec7_parta_furthest_all.xls" delimiter = '09'x lrecl = 32767;
+	if first.plantnme then do;
+	put plantnme;
+	put '09'x endusdsc '09'x far_distance_2011 far_sales_2011 far_tons_2011 '09'x far_distance_2012 far_sales_2012 far_tons_2012 '09'x
+far_distance_2013 far_sales_2013 far_tons_2013 '09'x far_distance_2014 far_sales_2014 far_tons_2014;
+end;
+else put '09'x endusdsc '09'x far_distance_2011 far_sales_2011 far_tons_2011 '09'x far_distance_2012 far_sales_2012 far_tons_2012 '09'x
+far_distance_2013 far_sales_2013 far_tons_2013 '09'x far_distance_2014 far_sales_2014 far_tons_2014;run;
+
+
+****macro for percentages within radii***;
+
+%macro cl(cl,nm);
+
+proc means data=plnm_year_lats_collapse nway noprint;
+	where country in ("CANADA" "USA" "INTERNATIONAL") & &cl. ;
+	class plantnme endusdsc year /missing;
+	var sales tons;
+	output out=ds_&nm. (drop=_:) sum(sales)=sales_&nm. sum(tons)=tons_&nm.;
+	run;
+
+%mend cl;
+%cl(source_dist le 200,l200);
+%cl(source_dist le 300,l300);
+%cl(source_dist > 300,g300);
+%cl(plantnme ne "",total);
+
+data spec7_radii_calculations;
+	merge ds_l200 ds_l300 ds_g300 ds_total;
+	by plantnme endusdsc year;
+	if sales_total ne 0 then sales_share_l200=sales_l200/sales_total; else sales_share_l200=0;
+	if sales_total ne 0 then sales_share_l300=sales_l300/sales_total; else sales_share_l300=0;
+	if sales_total ne 0 then sales_share_g300=sales_g300/sales_total; else sales_share_g300=0;
+	if tons_total ne 0 then tons_share_l200=tons_l200/tons_total; else tons_share_l200=0;
+	if tons_total ne 0 then tons_share_l300=tons_l300/tons_total; else tons_share_l300=0;
+	if tons_total ne 0 then tons_share_g300=tons_g300/tons_total; else tons_share_g300=0;
+	run;
+
+proc transpose data=spec7_radii_calculations out=spec7_trans;
+	by plantnme endusdsc year;
+	var tons: sales:;
+	run;
+
+data spec7_trans2;
+	set spec7_trans;
+	header=strip(upcase(_NAME_))||"_"||strip(year);
+	run;
+
+proc transpose data=spec7_trans2 out=out.spec7_radii_calculations;
+	by plantnme endusdsc ;
+	id header;
+	var col1;
+	run;
+
+data _null_;
+	set out.spec7_radii_calculations (where=(endusdsc ne " "));
+	by plantnme endusdsc;
+	file "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out\spec7_radii_calculations.xls" delimiter = '09'x lrecl = 32767;
+	if first.plantnme then do;
+	put plantnme;
+	put '09'x endusdsc '09'x TONS_SHARE_L200_2011 SALES_SHARE_L200_2011	TONS_SHARE_L300_2011 SALES_SHARE_L300_2011	TONS_SHARE_G300_2011 SALES_SHARE_G300_2011	
+'09'x TONS_SHARE_L200_2012 SALES_SHARE_L200_2012 TONS_SHARE_L300_2012 SALES_SHARE_L300_2012 TONS_SHARE_G300_2012	SALES_SHARE_G300_2012
+'09'x TONS_SHARE_L200_2013 SALES_SHARE_L200_2013 TONS_SHARE_L300_2013 SALES_SHARE_L300_2013 TONS_SHARE_G300_2013	SALES_SHARE_G300_2013
+'09'x TONS_SHARE_L200_2014 SALES_SHARE_L200_2014 TONS_SHARE_L300_2014 SALES_SHARE_L300_2014 TONS_SHARE_G300_2014 SALES_SHARE_G300_2014;
+end;
+else put '09'x endusdsc '09'x TONS_SHARE_L200_2011 SALES_SHARE_L200_2011	TONS_SHARE_L300_2011 SALES_SHARE_L300_2011	TONS_SHARE_G300_2011 SALES_SHARE_G300_2011	
+'09'x TONS_SHARE_L200_2012 SALES_SHARE_L200_2012 TONS_SHARE_L300_2012 SALES_SHARE_L300_2012 TONS_SHARE_G300_2012	SALES_SHARE_G300_2012
+'09'x TONS_SHARE_L200_2013 SALES_SHARE_L200_2013 TONS_SHARE_L300_2013 SALES_SHARE_L300_2013 TONS_SHARE_G300_2013	SALES_SHARE_G300_2013
+'09'x TONS_SHARE_L200_2014 SALES_SHARE_L200_2014 TONS_SHARE_L300_2014 SALES_SHARE_L300_2014 TONS_SHARE_G300_2014 SALES_SHARE_G300_2014;
+	run;
+
+data _null_;
+	set out.spec7_radii_calculations (where=(endusdsc ne " "));
+	by plantnme endusdsc;
+	file "F:\Competition\PBoberg19741.00-Axinn-Axinn-AXINN\Work Product\CWA\out\spec7_radii_raw.xls" delimiter = '09'x lrecl = 32767;
+	put plantnme endusdsc '09'x TONS_L200_2011	TONS_L300_2011	TONS_G300_2011	TONS_TOTAL_2011	TONS_SHARE_L200_2011	TONS_SHARE_L300_2011	TONS_SHARE_G300_2011	SALES_L200_2011	SALES_L300_2011	SALES_G300_2011	SALES_TOTAL_2011	SALES_SHARE_L200_2011	SALES_SHARE_L300_2011	SALES_SHARE_G300_2011	TONS_L200_2012	TONS_L300_2012	TONS_G300_2012	TONS_TOTAL_2012	TONS_SHARE_L200_2012	TONS_SHARE_L300_2012	TONS_SHARE_G300_2012	SALES_L200_2012	SALES_L300_2012	SALES_G300_2012	SALES_TOTAL_2012	SALES_SHARE_L200_2012	SALES_SHARE_L300_2012	SALES_SHARE_G300_2012	TONS_L200_2013	TONS_L300_2013	TONS_G300_2013	TONS_TOTAL_2013	TONS_SHARE_L200_2013	TONS_SHARE_L300_2013	TONS_SHARE_G300_2013	SALES_L200_2013	SALES_L300_2013	SALES_G300_2013	SALES_TOTAL_2013	SALES_SHARE_L200_2013	SALES_SHARE_L300_2013	SALES_SHARE_G300_2013	TONS_L200_2014	TONS_L300_2014	TONS_G300_2014	TONS_TOTAL_2014	TONS_SHARE_L200_2014	TONS_SHARE_L300_2014	TONS_SHARE_G300_2014	SALES_L200_2014	SALES_L300_2014	SALES_G300_2014	SALES_TOTAL_2014	SALES_SHARE_L200_2014	SALES_SHARE_L300_2014	SALES_SHARE_G300_2014
+;	run;
+
+
