@@ -1,0 +1,910 @@
+*set up regression data for dap exports 
+* using fertecon prices
+
+**********************************************************************************************************
+set more off 
+local base "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\stata\"
+local data "`base'data\"
+local statadata "`base'statadata\"
+local comm "F:\Competition\PBoberg19300.00-LEE\Downloads\Commodities (2013-10-07)\"
+local precip "F:\Competition\PBoberg19300.00-LEE\Downloads\Precipitation\"
+local graphdir "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\Graphs\10-9-2013\"
+local raw "`base'raw\"
+
+**********************************************************************************************************
+/*
+cd "`data'"
+import excel using "Region xwalk.xlsx", firstrow clear
+sort Country 
+cd "`statadata'"
+save regionxwalk, replace 
+*/
+
+**********************************************************************************************************
+cd "`data'"
+import excel using "freight_prices.xlsx", sheet("Fertecon") firstrow clear 
+sort Date 
+tempfile freight_prices_raw
+save `freight_prices_raw'
+
+use `freight_prices_raw', clear 
+ds, has(type numeric)
+gen month = month(Date)
+gen year = year(Date)
+collapse (mean) `r(varlist)', by(month year)
+sort year month 
+tempfile freight_prices_monthly
+save `freight_prices_monthly'
+
+import excel using "exchange_rates.xlsx", firstrow clear 
+gen month = month(EndDate)
+gen year = year(EndDate)
+drop EndDate
+sort year month 
+cd "`statadata'"
+save exchange_rates, replace 
+
+**********************************************************************************************************
+*import commodity prices / preciptation 
+
+cd "`precip'"
+import excel using "Precipitation Complete (2013-10-9).xlsx", firstrow clear 
+gen date = date(Date, "MDY")
+format date %td 
+gen month = month(date)
+gen year = year(date)
+drop Date
+rename CentralPacificMonthlyAccumula central_pacific_precip
+rename MidwestMonthlyAccumulatedPrec midwest_precip
+rename NortheastMonthlyAccumulatedPr northeast_precip
+rename SouthMonthlyAccumulatedPrecip south_precip
+rename WestMonthlyAccumulatedPrecipi west_precip 
+rename SouthPacificMonthlyAccumulate south_pacific_precip
+
+gen p = . 
+replace p = 1 if (year == 2006 & month >= 9) | (year == 2007 & month < 9)
+replace p = 2 if (year == 2007 & month >= 9) | (year == 2008 & month < 9)
+replace p = 3 if (year == 2008 & month >= 9) | (year == 2009 & month < 9)
+replace p = 4 if (year == 2009 & month >= 9) | (year == 2010 & month < 9)
+replace p = 5 if (year == 2010 & month >= 9) | (year == 2011 & month < 9)
+replace p = 6 if (year == 2011 & month >= 9) | (year == 2012 & month < 9)
+replace p = 7 if (year == 2012 & month >= 9) | (year == 2013 & month < 9)
+replace p = 8 if (year == 2013 & month >= 9)
+drop if date == . 
+
+local regionlist "central_pacific midwest northeast south west south_pacific"
+sort p date 
+foreach var of local regionlist {
+by p : gen c_`var'_precip = sum(`var'_precip)
+}
+sort year month 
+drop p 
+tempfile precip
+save `precip' 
+
+cd "`comm'"
+import excel using "brent crude (EU) oil.xlsx", firstrow clear 
+gen date = date(Date, "MDY", 2020)
+format date %td 
+gen month = month(date)
+gen year = year(date)
+rename LastPrice eu_crude_oil 
+keep date month year eu_crude_oil
+sort year month
+tempfile eu_crude
+save `eu_crude'
+
+cd "`comm'"
+import excel using "henry hub natrual gas.xlsx", firstrow clear 
+gen date = date(Date, "MDY", 2020)
+format date %td 
+gen month = month(date)
+gen year = year(date)
+rename LastPrice us_nat_gas
+keep date month year us_nat_gas
+sort year month
+tempfile eu_nat_gas
+save `eu_nat_gas'
+
+cd "`comm'"
+import excel using "phosphoric rock.xlsx", firstrow clear 
+gen date = date(Date, "MDY", 2020)
+format date %td 
+gen month = month(date)
+gen year = year(date)
+rename LastPrice phos_rock
+keep date month year phos_rock
+sort year month
+tempfile phos_rock
+save `phos_rock'
+
+cd "`comm'"
+import excel using "saudi oil.xlsx", firstrow clear 
+gen date = date(Date, "MDY", 2020)
+format date %td 
+gen month = month(date)
+gen year = year(date)
+rename LastPrice saudi_oil	
+keep date month year saudi_oil
+sort year month
+tempfile saudi_oil
+save `saudi_oil'
+
+cd "`comm'"
+import excel using "sulfur.xlsx", firstrow clear 
+gen date = date(Date, "MDY", 2020)
+format date %td 
+gen month = month(date)
+gen year = year(date)
+rename LastPrice sulfur
+keep date month year sulfur
+sort year month
+tempfile sulfur
+save `sulfur'
+
+
+cd "`comm'"
+import excel using "UK natural gas.xlsx", firstrow clear 
+gen date = date(Date, "MDY", 2020)
+format date %td 
+gen month = month(date)
+gen year = year(date)
+rename LastPrice uk_nat_gas
+keep date month year uk_nat_gas
+sort year month
+tempfile uk_nat_gas
+save `uk_nat_gas'
+
+cd "`comm'"
+import excel using "us corn.xlsx", firstrow clear 
+gen date = date(Date, "MDY", 2020)
+format date %td 
+gen month = month(date)
+gen year = year(date)
+rename KansasCityKansasNo2Yellow corn_ks_2
+rename EddyvilleIowaCornYellow corn_ia
+rename ChicagoIllinoisCornYellow corn_il
+rename CincinnatiOhioNo2YellowCor corn_oh
+rename StLouisMissouriCornYellow corn_mo
+keep date month year corn_*
+sort year month
+tempfile us_corn
+save `us_corn'
+
+cd "`comm'"
+import excel using "wti us crude.xlsx", firstrow clear 
+gen date = date(Date, "MDY", 2020)
+format date %td 
+gen month = month(date)
+gen year = year(date)
+rename LastPrice us_crude
+keep date month year us_crude
+sort year month
+tempfile us_crude
+save `us_crude'
+
+cd "`comm'"
+import excel using "Corn Futures.xlsx", firstrow clear 
+rename Date date 
+gen year = year(date)
+gen month = month(date)
+collapse (mean) Future, by(year month)
+rename Future us_corn_future 
+sort year month
+tempfile us_corn_future
+save `us_corn_future'
+
+import excel using "F:\Competition\PBoberg19300.00-LEE\Downloads\ROW Dap Map Capacity.xlsx", firstrow clear 
+gen date = mdy(1, 1, A)
+format date %td 
+gen month_date = mofd(date)
+format month_date %tm 
+tsset month_date 
+tsfill, full 
+rename row_dap _row_dap
+rename row_map _row_map 
+replace _row_dap = 1.10231*_row_dap
+replace _row_map = 1.10231*_row_map
+ipolate _row_dap month_date, generate(row_dap)
+ipolate _row_map month_date, generate(row_map)
+keep month_date row_dap row_map 
+gen date = dofm(month_date)
+format date %td 
+gen year = year(date)
+gen month = month(date)
+egen row_capacity = rsum(row_dap row_map)
+keep year month row_dap row_map row_capacity 
+sort year month 
+tempfile row_capacity 
+save `row_capacity' 
+
+
+insheet using "F:\Competition\PBoberg19300.00-LEE\Downloads\PPI\phosphoric_fertilizer_mfr.csv", comma clear 
+replace value = subinstr(value, "(P)", "", .)
+destring value, replace 
+rename period month
+replace month = subinstr(month, "M", "", . )
+destring month, replace 
+rename value ppi
+keep year month ppi 
+sort year month 
+tempfile ppi 
+save `ppi' 
+
+import excel using "F:\Competition\PBoberg19300.00-LEE\Downloads\Cost of Capital\Agricultural Chemicals Cost of Capital.xlsx", firstrow clear 
+gen month = . 
+replace month = 9 if trim(B) == "September"
+replace month = 6 if trim(B) == "June"
+replace month = 3 if trim(B) == "March"
+replace month = 12 if trim(B) == "December"
+drop if A == "*Sic median"
+destring A, replace 
+gen _date = mdy(month,1,A)
+format _date %td 
+gen month_date = mofd(_date)
+format month_date %tm 
+tsset month_date
+gsort month_date
+tsfill
+carryforward capm, replace
+carryforward capm_size_prem, replace
+carryforward three_fact_fama_french, replace 
+keep month_date capm capm_size_prem three_fact_fama_french 
+gen date = dofm(month_date)
+format date %td 
+gen year = year(date)
+gen month = month(date) 
+rename capm ac_coc_1 
+rename capm_size_prem ac_coc_2
+rename three_fact_fama_french ac_coc_3 
+label var ac_coc_1 "CAPM"
+label var ac_coc_2 "CAPM w/ Size Premium"
+label var ac_coc_3 "Three Factor Fama French"
+keep year month ac_*
+tempfile ac_coc
+save `ac_coc'
+
+import excel using "F:\Competition\PBoberg19300.00-LEE\Downloads\Planted Acres\Corn.xlsx", clear 
+drop if _n == 1 | _n == 2 
+rename A year 
+destring year, replace 
+drop B C D E F 
+destring G, replace 
+rename G corn_planted_acres 
+replace corn_planted_acres = corn_planted_acres*1000000
+format corn_planted_acres %15.0g
+keep if year >= 2006 
+gen _date = mdy(8, 1, year) 
+gen month_date = mofd(_date)
+format month_date %tm 
+format _date %td 
+tsset month_date 
+tsfill, full
+gsort -month_date 
+carryforward corn_planted_acres, replace 
+keep month_date corn_planted_acres 
+gen date = dofm(month_date)
+format date %td 
+gen year = year(date)
+gen month = month(date)
+keep month year corn_planted_acres 
+sort year month 
+tempfile corn_planted_acres
+save `corn_planted_acres' 
+
+import excel using "F:\Competition\PBoberg19300.00-LEE\Downloads\Cost of Capital\International Cost of Capital.xlsx", firstrow clear 
+drop if Year == "*year ends in March" 
+destring Year, replace
+bysort Year: egen russia_coc_1 = sum(LogModel * (trim(Country) == "Russia"))
+bysort Year: egen morocco_coc_1 = sum(LogModel * (trim(Country) == "Morocco"))
+bysort Year: egen india_coc_1 = sum(LogModel * (trim(Country) == "India"))
+bysort Year: egen china_coc_1 = sum(LogModel * (trim(Country) == "China"))
+
+bysort Year: egen russia_coc_2 = sum(LinearModel * (trim(Country) == "Russia"))
+bysort Year: egen morocco_coc_2 = sum(LinearModel * (trim(Country) == "Morocco"))
+bysort Year: egen india_coc_2 = sum(LinearModel * (trim(Country) == "India"))
+bysort Year: egen china_coc_2 = sum(LinearModel * (trim(Country) == "China"))
+drop Country LogModel LinearModel
+duplicates drop 
+
+gen _date = mdy(4,1, Year) 
+replace _date = mdy(10, 1, Year) if Year == 2013 
+format _date %td 
+gen month_date = mofd(_date)
+format month_date %tm 
+tsset month_date 
+tsfill
+
+local clist "russia india morocco china"
+foreach var of local clist {
+di "`var'"
+carryforward `var'_coc_1, replace
+carryforward `var'_coc_2, replace 
+}
+
+drop _date 
+gen date = dofm(month_date)
+format date %td 
+gen year = year(date)
+gen month = month(date)
+keep year month russia_* india_* morocco_* china_*
+tempfile intl_coc 
+save `intl_coc'
+
+**********************************************************************************************************
+* import import data 
+cd "`data'"
+
+import excel using "DAP and MAP Imports and Exports 9-30-13.xlsx", sheet("DAP exports") firstrow  clear 
+tempfile dapexport
+save `dapexport'
+
+import excel using "DAP and MAP Imports and Exports 9-30-13.xlsx", sheet("MAP exports") firstrow clear 
+tempfile mapexport
+save `mapexport'
+
+import excel using "DAP and MAP Imports and Exports 9-30-13.xlsx", sheet("DAP imports") firstrow clear 
+tempfile dapimport
+save `dapimport'
+
+import excel using "DAP and MAP Imports and Exports 9-30-13.xlsx", sheet("MAP Imports") firstrow clear 
+tempfile mapimport
+save `mapimport'
+
+import excel using "DAP and MAP Imports and Exports 9-30-13.xlsx", sheet("region_xwalk") firstrow clear 
+tempfile xwalk
+sort Country
+save `xwalk' 
+
+
+use `dapexport', clear
+append using `mapexport'
+append using `dapimport'
+append using `mapimport' 
+drop if Country == "(9999) WORLD" | Country == "WORLD"
+duplicates drop 
+replace data = subinstr(data, "--", "", .)
+destring data, replace 
+drop if data == . 
+replace Country = "(9999) WORLD" if Country == "WORLD"
+drop E 
+cd "`statadata'"
+save importexportdata, replace 
+
+*********************************************************************************************************
+
+cd "`statadata'"
+use importexportdata, clear 
+gen year = year(Date)
+gen month = month(Date)
+bysort year month: egen double dap_imports = sum(data*(Type == "DAP Imports"))
+bysort year month: egen double dap_exports = sum(data*(Type == "DAP Exports"))
+bysort year month: egen double map_imports = sum(data*(Type == "MAP Imports"))
+bysort year month: egen double map_exports = sum(data*(Type == "MAP Exports"))
+duplicates drop month year, force 
+drop Type Date Country data 
+egen double total_imports = rsum(dap_imports map_imports)
+egen double total_exports = rsum(dap_exports map_exports)
+sort year month 
+tempfile fulldata
+save `fulldata'
+***********************************************************************************************************
+cd "`raw'"
+import excel using fw_map_price.xlsx, sheet("Sheet2") firstrow clear 
+local convert = 1.10231
+gen fw_map_usgulf = map_price/`convert'
+drop if date == . 
+drop if date >= mdy(9, 15, 2013)
+****************************************
+egen id = group(date)
+order date 
+tsset date 
+tsfill 
+gsort -date
+gen day = 1 
+carryforward id, replace 
+gen _month = month(date)
+gen _year = year(date)
+bysort id: egen month = mode(_month)
+bysort id: egen year = mode(_year)
+order id date _month _year day month year 
+collapse (mean) fw_map_usgulf, by(year month)
+sort year month
+tempfile fw_map_pricex
+save `fw_map_price'
+
+
+*import fertecon price data 
+cd "`data'"
+insheet using "dap_fertecon.csv", comma names clear 
+local convert = 1.10231
+replace week = subinstr(week, "-", "", .)
+
+ds, has(type numeric)
+local vars `r(varlist)'
+foreach var of varlist `vars' {
+  *replace `var' = `var'/`convert'
+  replace `var' =  . if `var' == 0 
+}
+replace units = "ST"
+gen date = date(week, "DMY")
+format date %td 
+drop week 
+*********************
+*code to convert to month prices 
+egen id = group(date)
+order date 
+tsset date 
+tsfill 
+gsort -date
+gen day = 1 
+carryforward id, replace 
+gen _month = month(date)
+gen _year = year(date)
+bysort id: egen month = mode(_month)
+bysort id: egen year = mode(_year)
+order id date _month _year day month year 
+collapse (mean) `vars', by(year month)
+**********************
+
+foreach var of varlist `vars' {
+  rename `var' f_`var'
+}
+
+tempfile fertecon_dap_prices
+sort year month
+save `fertecon_dap_prices'
+
+
+********************
+
+*import profercy price data 
+cd "`data'"
+insheet using "dap_profercy.csv", comma names clear 
+
+local convert = 1.10231
+replace week = subinstr(week, "-", "", .)
+
+ds, has(type numeric)
+local vars `r(varlist)'
+foreach var of varlist `vars' {
+  replace `var' = `var'/`convert'
+  replace `var' =  . if `var' == 0 
+}
+replace units = "ST"
+gen date = date(week, "DMY")
+format date %td 
+drop week 
+**********
+*code to convert to month prices 
+egen id = group(date)
+order date 
+tsset date 
+tsfill 
+gsort -date
+gen day = 1 
+carryforward id, replace 
+gen _month = month(date)
+gen _year = year(date)
+bysort id: egen month = mode(_month)
+bysort id: egen year = mode(_year)
+order id date _month _year day month year 
+collapse (mean) `vars', by(year month)
+**********
+foreach var of varlist `vars' {
+  rename `var' p_`var'
+}
+tempfile profercy_dap_prices
+sort year month
+save `profercy_dap_prices'
+
+
+*import fw price data 
+cd "`data'"
+insheet using "dap_fw.csv", comma names clear 
+local convert = 1.10231
+replace week = subinstr(week, "-", "", .)
+
+ds, has(type numeric)
+local vars `r(varlist)'
+foreach var of varlist `vars' {
+  *replace `var' = `var'/`convert'
+  replace `var' =  . if `var' == 0 
+}
+replace units = "ST"
+gen date = date(week, "DMY")
+format date %td 
+drop week 
+******
+*code to convert to month prices 
+egen id = group(date)
+order date 
+tsset date 
+tsfill 
+gsort -date
+gen day = 1 
+carryforward id, replace 
+gen _month = month(date)
+gen _year = year(date)
+bysort id: egen month = mode(_month)
+bysort id: egen year = mode(_year)
+order id date _month _year day month year 
+collapse (mean) `vars', by(year month)
+******
+foreach var of varlist `vars' {
+  rename `var' fw_`var'
+}
+tempfile fw_dap_prices
+sort year month
+save `fw_dap_prices'
+
+*import fmb price data 
+cd "`data'"
+insheet using "dap_fmb.csv", comma names clear 
+
+local convert = 1.10231
+replace week = subinstr(week, "-", "", .)
+
+ds, has(type numeric)
+local vars `r(varlist)'
+foreach var of varlist `vars' {
+  replace `var' = `var'/`convert'
+  replace `var' =  . if `var' == 0 
+}
+replace units = "ST"
+gen date = date(week, "DMY")
+format date %td 
+drop week 
+*****
+*code to convert to month prices 
+egen id = group(date)
+order date 
+tsset date 
+tsfill 
+gsort -date
+gen day = 1 
+carryforward id, replace 
+gen _month = month(date)
+gen _year = year(date)
+bysort id: egen month = mode(_month)
+bysort id: egen year = mode(_year)
+order id date _month _year day month year 
+collapse (mean) `vars', by(year month)
+*****
+foreach var of varlist `vars' {
+  rename `var' fmb_`var'
+}
+tempfile fmb_dap_prices
+sort year month
+save `fmb_dap_prices'
+
+**********************************************************************************************************
+*MERGE EVERYTHING TOGETHER 
+
+use `fulldata', clear 
+merge 1:1 year month using `fertecon_dap_prices'
+drop if _merge == 2 
+drop _merge 
+
+
+merge 1:1 year month using `profercy_dap_prices'
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 year month using `fw_dap_prices'
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 year month using `fmb_dap_prices'
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 year month using `fw_map_price'
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 year month using `freight_prices_monthly'
+drop if _merge == 2 
+drop _merge 
+
+cd "`statadata'"
+merge 1:1 year month using exchange_rates
+drop if _merge == 2 
+drop _merge 
+
+******************************************************************************
+
+*merge on commodities and precipiation 
+merge 1:1 year month using `precip'
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 year month using `eu_crude'
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 year month using `eu_nat_gas'
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 year month using `phos_rock'
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 year month using `saudi_oil'
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 year month using `sulfur'
+drop if _merge == 2 
+drop _merge
+
+merge 1:1 year month using `uk_nat_gas'
+drop if _merge == 2 
+drop _merge
+
+
+merge 1:1 year month using `us_corn'
+drop if _merge == 2 
+drop _merge
+
+merge 1:1 year month using `us_crude'
+drop if _merge == 2 
+drop _merge
+
+merge 1:1 year month using `us_corn_future'
+drop if _merge == 2 
+drop _merge
+
+****************************************
+*new merge 10_30_2013 
+merge 1:1 year month using `row_capacity'
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 year month using `ppi'
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 year month using `ac_coc' 
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 year month using `corn_planted_acres' 
+drop if _merge == 2 
+drop _merge 
+
+merge 1:1 year month using `intl_coc' 
+drop if _merge == 2  
+drop _merge 
+
+****************************************
+
+cd "`data'"
+save total_regression_10_30_2013, replace 
+
+****
+/*
+keep year month fw_us_gulf_tampa fw_map_usgulf ex_* *precip map_exports map_imports dap_exports dap_imports total_exports total_imports ppi ac_*  us_nat_gas sulfur phos_rock us_corn_future saudi_oil row_capacity corn_planted_acres
+export excel using "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\stata\compare\compare_data.xls", firstrow(variables) replace
+export sasxport "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\stata\compare\compare_data.xpt", rename replace
+*/
+*****************************************************
+**************REGRESSIONS****************************
+*****************************************************
+
+cd "`data'"
+use total_regression_10_30_2013, clear 
+
+gen fw_combined_tampa_price = 3338/(4358+3338)*fw_map_usgulf + 4358/(4358+3338)*fw_us_gulf_tampa
+
+************
+* fill in missing prices with other sources 
+
+reg f_morocco fmb_morocco
+predict f_morocco_hat
+replace f_morocco =  f_morocco_hat if f_morocco == . 
+drop f_morocco_hat
+
+reg f_tunisia fmb_tunisia
+predict f_tunisia_hat 
+replace f_tunisia = f_tunisia_hat if f_tunisia == . 
+drop f_tunisia_hat
+
+
+reg f_jordan fmb_jordan
+predict f_jordan_hat 
+replace f_jordan = f_jordan_hat if f_jordan == . 
+drop f_jordan_hat
+
+reg f_india fw_india
+predict f_india_hat, xb
+replace f_india = f_india_hat if f_india == . 
+drop f_india_hat 
+
+reg f_china fw_china
+predict f_china_hat
+replace f_china = f_china_hat if f_china == . 
+drop f_china_hat 
+
+reg f_black_sea fw_black_sea 
+predict f_black_sea_hat
+replace f_black_sea = f_black_sea_hat if f_black_sea == . 
+drop f_black_sea_hat
+
+*********
+
+* take logs 
+sort date 
+gen l_map_imports = log(map_imports)
+gen l_map_exports = log(map_exports)
+gen l_dap_exports = log(dap_exports)
+gen l_dap_imports = log(dap_imports)
+gen l_total_imports = log(total_imports)
+gen l_total_exports = log(total_exports)
+
+*fw
+gen l_fw_tampa_price = 3338/(4358+3338)*log(fw_map_usgulf) + 4358/(4358+3338)*log(fw_us_gulf_tampa) // stone index 
+*gen l_fw_tampa_price = log(fw_combined_tampa_price) // weighted average 
+*gen l_fw_tampa_price = log(fw_us_gulf_tampa) // dap price 
+gen l_fw_blacksea_price = log(fw_black_sea)
+gen l_fw_nafrica_price=  log(fw_north_africa)
+gen l_fw_india_price = log(fw_india)
+gen l_fw_china_price = log(fw_china)
+
+*fertecon
+gen l_f_usgulf_price = log(f_us_gulf)
+gen l_f_morocco_price = log(f_morocco)
+gen l_f_india_price = log(f_india)
+gen l_f_blacksea_price = log(f_black_sea)
+gen l_f_china_price = log(f_china)
+
+*exchange rates 
+gen l_ex_tunisia = log(ex_tunisia)
+gen l_ex_morocco = log(ex_morocco)
+gen l_ex_lithuania = log(ex_lithuania)
+gen l_ex_russia = log(ex_russia)
+gen l_ex_india = log(ex_india)
+gen l_ex_china = log(ex_china)
+
+*commodoites
+gen l_us_nat_gas = log(us_nat_gas)
+gen l_sulfur = log(sulfur)
+gen l_phos_rock = log(phos_rock)
+gen l_corn_future = log(us_corn_future)
+gen l_oil_price = log(saudi_oil)
+gen l_row_capacity = log(row_capacity) 
+gen l_corn_planted_acres = log(corn_planted_acres)
+
+*non cumulative precipations
+gen l_precip_cp = log(central_pacific_precip)
+gen l_precip_mw = log(midwest_precip)
+gen l_precip_s = log(south_precip)
+gen l_precip_sp = log(south_pacific_precip)
+gen l_precip_w = log(west_precip)
+
+*cumulative precipations
+gen l_c_precip_cp = log(c_central_pacific_precip)
+gen l_c_precip_mw = log(c_midwest_precip)
+gen l_c_precip_s = log(c_south_precip)
+gen l_c_precip_sp = log(c_south_pacific_precip)
+gen l_c_precip_w = log(c_west_precip)
+
+*domestic deflators 
+gen l_ppi = log(ppi)
+gen l_ac_coc_1 = log(ac_coc_1)
+gen l_ac_coc_2 = log(ac_coc_2)
+gen l_ac_coc_3 = log(ac_coc_3)
+
+*international deflators 
+gen l_russia_coc_1 = log(russia_coc_1)
+gen l_russia_coc_2 = log(russia_coc_2)
+gen l_morocco_coc_1 = log(morocco_coc_1)
+gen l_morocco_coc_2 = log(morocco_coc_2)
+gen l_india_coc_1 = log(india_coc_1)
+gen l_india_coc_2 = log(india_coc_2)
+
+
+
+local deflate_list "l_fw_tampa_price l_fw_blacksea_price l_fw_india_price l_fw_nafrica_price l_f_usgulf_price l_f_india_price l_f_morocco_price l_f_blacksea_price l_f_china_price l_corn_future l_phos_rock l_sulfur l_us_nat_gas l_precip_mw l_c_precip_mw l_row_capacity l_corn_planted_acres"
+foreach var of local deflate_list {
+	gen df_ppi_`var' = `var' - l_ppi 
+	gen df_ac1_`var' = `var' - l_ac_coc_1
+	gen df_ac3_`var' = `var' - l_ac_coc_3
+
+}
+
+
+
+**************************************************
+capture log close 
+log using "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\Reg Output\2013-10-30\iv_import_regression.log", replace 
+
+*fw prices 
+reg l_fw_tampa_price l_total_imports l_phos_rock l_us_nat_gas l_sulfur l_precip_mw l_c_precip_mw l_corn_future l_corn_planted_acres 
+outreg2 using "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\Reg Output\2013-11-1\Import Regression 2013-11-30_FW.xml", excel replace
+
+ivregress 2sls l_fw_tampa_price l_phos_rock l_us_nat_gas l_sulfur l_precip_mw l_c_precip_mw  l_corn_future l_corn_planted_acres ///
+(l_total_imports = l_fw_blacksea_price l_fw_india_price l_fw_nafrica_price l_ex_russia l_ex_morocco l_ex_india l_oil_price l_row_capacity), first  
+outreg2 using "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\Reg Output\2013-11-1\Import Regression 2013-11-30_FW.xml", excel append
+
+
+ivregress 2sls df_ppi_l_fw_tampa_price df_ppi_l_phos_rock df_ppi_l_us_nat_gas df_ppi_l_sulfur df_ppi_l_precip_mw df_ppi_l_c_precip_mw df_ppi_l_corn_future  df_ppi_l_corn_planted_acres ///
+(l_total_imports = df_ppi_l_fw_blacksea_price df_ppi_l_fw_india_price df_ppi_l_fw_nafrica_price l_ex_russia l_ex_morocco l_ex_india df_ppi_l_row_capacity), first 
+outreg2 using "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\Reg Output\2013-11-1\Import Regression 2013-11-30_FW.xml", excel append
+
+ivregress 2sls df_ac1_l_fw_tampa_price df_ac1_l_phos_rock df_ac1_l_us_nat_gas df_ac1_l_sulfur df_ac1_l_precip_mw df_ac1_l_c_precip_mw df_ac1_l_corn_future df_ac1_l_corn_planted_acres ///
+(l_total_imports = df_ac1_l_fw_blacksea_price df_ac1_l_fw_india_price df_ac1_l_fw_nafrica_price l_ex_russia l_ex_morocco l_ex_india df_ac1_l_row_capacity), first 
+outreg2 using "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\Reg Output\2013-11-1\Import Regression 2013-11-30_FW.xml", excel append
+
+ivregress 2sls df_ac3_l_fw_tampa_price df_ac3_l_phos_rock df_ac3_l_us_nat_gas df_ac3_l_sulfur df_ac3_l_precip_mw df_ac3_l_c_precip_mw df_ac3_l_corn_future df_ac3_l_corn_planted_acres ///
+(l_total_imports = df_ac3_l_fw_blacksea_price df_ac3_l_fw_india_price df_ac3_l_fw_nafrica_price l_ex_russia l_ex_morocco l_ex_india df_ac3_l_row_capacity) , first 
+outreg2 using "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\Reg Output\2013-11-1\Import Regression 2013-11-30_FW.xml", excel append
+
+
+*log close 
+**************************************************
+capture log close 
+ log using "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\Reg Output\2013-10-30\iv_export_regression.log", replace 
+* EXPORT REGRESSION 
+
+*fertecon 
+reg l_total_exports l_fw_tampa_price l_f_india_price l_f_china_price l_f_blacksea_price l_f_morocco_price l_ex_india l_ex_china l_ex_russia l_ex_morocco l_row_capacity  l_phos_rock l_us_nat_gas l_sulfur 
+outreg2 using "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\Reg Output\2013-11-1\Export Regression 2013-10-30_Fertecon.xml", excel replace
+
+ivregress 2sls l_total_exports l_f_india_price l_f_china_price l_f_blacksea_price l_f_morocco_price l_ex_india l_ex_china l_ex_russia l_ex_morocco l_row_capacity ///
+l_phos_rock l_us_nat_gas l_sulfur ///
+(l_fw_tampa_price = l_precip_mw l_c_precip_mw l_corn_future l_corn_planted_acres), first 
+outreg2 using "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\Reg Output\2013-11-1\Export Regression 2013-10-30_Fertecon.xml", excel append
+
+ivregress 2sls l_total_exports df_ppi_l_f_india_price df_ppi_l_f_china_price df_ppi_l_f_blacksea_price df_ppi_l_f_morocco_price l_ex_india l_ex_china l_ex_russia l_ex_morocco df_ppi_l_row_capacity ///
+df_ppi_l_phos_rock df_ppi_l_us_nat_gas df_ppi_l_sulfur ///
+(df_ppi_l_fw_tampa_price = df_ppi_l_precip_mw df_ppi_l_c_precip_mw df_ppi_l_corn_future df_ppi_l_corn_planted_acres), first 
+outreg2 using "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\Reg Output\2013-11-1\Export Regression 2013-10-30_Fertecon.xml", excel append
+
+ivregress 2sls l_total_exports df_ac1_l_f_india_price df_ac1_l_f_china_price df_ac1_l_f_blacksea_price df_ac1_l_f_morocco_price l_ex_india l_ex_china l_ex_russia l_ex_morocco df_ac1_l_row_capacity ///
+df_ac1_l_phos_rock df_ac1_l_us_nat_gas df_ac1_l_sulfur ///
+(df_ac1_l_fw_tampa_price = df_ac1_l_precip_mw df_ac1_l_c_precip_mw df_ac1_l_corn_future df_ac1_l_corn_planted_acres), first 
+outreg2 using "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\Reg Output\2013-11-1\Export Regression 2013-10-30_Fertecon.xml", excel append
+
+ivregress 2sls l_total_exports df_ac3_l_f_india_price df_ac3_l_f_china_price df_ac3_l_f_blacksea_price df_ac3_l_f_morocco_price l_ex_india l_ex_china l_ex_russia l_ex_morocco df_ac3_l_row_capacity ///
+df_ac3_l_phos_rock df_ac3_l_us_nat_gas df_ac3_l_sulfur ///
+(df_ac3_l_fw_tampa_price = df_ac3_l_precip_mw df_ac3_l_c_precip_mw df_ac3_l_corn_future df_ac3_l_corn_planted_acres), first 
+outreg2 using "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\Reg Output\2013-11-1\Export Regression 2013-10-30_Fertecon.xml", excel append
+
+capture log close 
+
+************
+/*
+egen before = sum(total_imports*(month <= 7 & year < 2013))
+egen after = sum(total_imports*(month > 7 & year < 2013))
+egen _2013 = sum(total_imports*(year==2013))
+egen double div = rsum(before after)
+gen percent_before = before/div 
+gen fullyear_2013 = _2013/percent_before 
+
+
+egen before = sum(total_exports*(month <= 7 & year < 2013))
+egen after = sum(total_exports*(month > 7 & year < 2013))
+egen _2013 = sum(total_exports*(year==2013))
+egen double div = rsum(before after)
+gen percent_before = before/div 
+gen fullyear_2013 = _2013/percent_before 
+
+
+/*
+label var ppi "ppi"
+label var f_us_gulf "dap us gulf price"
+twoway (tsline ppi, color(dknavy)) (tsline ac_coc_1, yaxis(2) color(yellow)) (tsline russia_coc_1, yaxis(2) color(green)) (tsline india_coc_1, yaxis(2) color(orange))  (tsline morocco_coc_1, yaxis(2) color(red)) (tsline f_us_gulf, color(black))
+graph export using "F:\Competition\PBoberg19300.00-LEE\CRA Work Product\Import Data\TES\Reg Output\2013-10-30\costofcapital.pdf", replace 
+
+
+
+
+
+
+
+
+***************************************************
+
+log close 
