@@ -1,0 +1,301 @@
+/* Proc Import */
+
+	proc import 
+		datafile = "Filepath\Filename.ext"
+		out = data.&type.
+		dbms = excel
+		replace;
+		getnames = yes;
+		sheet = "";
+		run;
+
+
+/* Proc Export */
+
+	proc export data = data.set
+		outfile = "Filepath\Filename.ext"
+		dbms = excel 
+		replace;
+		sheet = "";
+		run;
+
+	proc export data=out.ctmodel_ynhh_hsr_drg_dropmiss outfile= "/v25/sm15681.00/mi15681/Hospital_Choice/Output/ctmodel_ynhh_hsr_drg_dropmiss.csv" dbms=csv replace; run;
+
+
+
+/* Macro */
+
+	%macro readin (type);
+
+	%mend readin;
+	%readin(HH); run;
+	%readin(A18_49); run;
+	%readin(A25_54); run;
+
+
+/* Exporting to formatted excel book (has to already be created) */
+
+%macro rg(rg);
+ 
+filename ddeout dde "excel|&rg.!r9c2:r500c11" lrecl=30000  notab;
+Data _null_;
+ Set &rg.;
+ File ddeout dsd dlm='09'x;
+ Put  COMPANY_NAME__GBO_  share08_sweetsavory  share08_chips  share08_extruded  share08_tortilla  share08_popcorn  share08_pretzels  share08_nuts  share08_fruit  
+   share08_other;
+Run;
+ 
+filename ddeout dde "excel|&rg.!r1c2:r1c2" lrecl=30000  notab;
+Data _null_;
+ Set header_&rg.;
+ File ddeout dsd dlm='09'x;
+ Put  Region;
+Run;
+ 
+%mend rg;
+%rg(Algeria);
+%rg(Argentina);
+%rg(EU);
+%rg(World);
+ 
+Data _null_;
+ file cmds;
+ put '[save.as("C:\Documents and Settings\jstahl\Desktop\Snacks\Analysis\JBS\Output\Snack Shares - Euromonitor Segments (DATE).xls")]';
+ put '[close("C:\Documents and Settings\jstahl\Desktop\Snacks\Analysis\JBS\Output\Snack Shares - Euromonitor Segments (DATE).xls")]';
+Run;
+
+/* Formatting */
+
+if index(var,"")> 0 then __;
+
+newvar = upcase(oldvar);
+
+newvar = trim(kleft(oldvar));
+
+len = length(var);
+
+newvar = substr(oldvar,1,num);
+
+newvar = compress(var||"_"||var2);
+
+date_find = '13nov2001'D
+
+
+/* Infile */
+
+data dataset;
+	infile "lib/file.csv"  dlm = ' , '  missover  dsd firstobs=2 obs=# lrecl=1200;
+	informat var1 $11. var2 $8. var3 mmddyy10. var4 best12.;
+	format var1 $11. var2 $8. var3 mmddyy10. var4 best12.;
+		input @;
+		_infile_=compress(_infile_,"$");
+	input var1 $ var2 $ var3 var4;
+	run;
+
+	/* Read in one var */
+
+	data data;
+		format var $9000.;
+		infile "filepath\file.txt" firstobs=1;
+		input @;
+		var = _infile_;
+		run;
+
+	/* Infile with fixed spacing */
+
+	data data.dataset;
+		infile "filepath/file.ext" /*can be nonvalid exts */
+	 	missover dsd lrecl=370; /* fill in with actual length */
+	 	input 
+			var1 $ 1-11
+			var2 $ 12-17
+			var3 18-23;
+		run;
+
+
+/* Proc Freq */
+
+proc freq data = data.test;
+	tables file / out = data.repeats;
+	run;
+
+
+/* Retain */
+
+data data.data;
+	set data.data;
+	retain level;
+	by variable;
+	if first.variable then level = 1;
+	else level +1;
+	run;
+
+
+/* Filling down */
+
+	data data.data;
+      retain retain_variable;
+      set data.data;
+      if missing (variable) then do;
+            variable = retain_variable;
+            end;
+      else retain_variable = variable;
+      run;
+
+
+/* Random Sample */
+
+proc surveyselect data = data.dataset
+	Method = SRS n = 50000 
+	out = data.sample;
+	run;
+
+/* Proc Compare */
+
+	proc compare data= data.data1 compare= data.data2
+		method=absolute criterion=.00001 listequalvar MAXPRINT=(30,1000);
+		var data1 vars;
+		with data2 vars;
+		run;
+
+
+/* Selective Merge */
+
+data file1 file2 file3;
+    merge input1 (in=ina) input2 (in=inb);
+    by var;
+    if ina and inb then output file1;
+    else if ina then output file2;
+    else output file3;
+run;
+
+
+
+
+/* Proc Append */
+
+proc append base = data.med_surg data = data.&file.; run;
+
+
+/* Proc Contents */
+
+proc contents data = dataset;
+	run;
+
+proc datasets library=work;
+	delete one_temp;
+	quit;
+
+data big;
+	set big;
+	select (year(date));
+		when (2003) interest=amount*.33;
+		when (2004) interest=amount*.21;
+		otherwise interest=amount*.10;
+	end; run;
+
+/* Expanding date range */
+
+	data data.method2;
+		set data.testsample;
+		do date = effective_date to term_date;
+			output;
+		end;
+		run;
+
+
+/* Distance Calc */
+
+	/*Constants */
+        polar=3949.99;                                                                                                                                                                                                             
+        equator=3963.34;
+        pi=3.1415926536;                                                                                                                                                                                                           
+
+	if latitude1 = latitude2 and longitude1 = longitude2 then do;                                                                                                                                                    
+    distance=0;                                                                                                                                                                                                            
+    end;                                                                                                                                                                                                                   
+
+    /* Calculate distance between two, non-identical points */                                                                                                                              
+
+    else if latitude1 ne latitude2 or longitude1 ne longitude2 then DO;                                                                                                                                              
+    d1=POLAR*arcos(((sin((latitude1/180)*PI))*(sin((latitude/180)*PI)))+((cos((latitude1/180)*PI))*(cos((latitude/180)*PI))*(cos((((longitude*(EQUATOR/POLAR))-(longitude1*(EQUATOR/POLAR)))/180)*PI))));
+    d2=equator*arcos(((sin(((latitude1*((polar/equator)))/180)*PI))*(sin(((latitude*((polar/equator)))/180)*PI)))+((cos(((latitude1*((POLAR/EQUATOR)))/180)*PI))*(cos(((latitude*((POLAR/EQUATOR)))/180)*PI))* 
+    (COS(((longitude-longitude1)/180)*PI))));                                                                                                                                                                    
+    distance=mean(d1,d2);                                                                                                                                                                                                  
+    end;       
+
+
+/* Join */
+
+proc sql;
+	create table final_table as 
+	select *
+	from table_1 as a join table_2 as b
+	on a.joinvar = b.joinvar;
+	quit;
+
+
+/* Range Merge */
+
+
+
+proc sql;
+	create table final_table as 
+	select *
+	from table_1 as B
+	join
+	table_2 as P
+	on (P.range_low <= B.value and B.value <= P.range_hi and P.year = B.year and P.qtr = B.qtr);
+	quit;
+
+proc sql;
+	create table small as
+	select b.*
+	from big as b
+	where b. date in(select distinct date from date);
+quit;
+
+
+/* Creating test dataset */
+       
+     data proj1.test;             
+     	input id var1 var2;
+	     cards;
+	     01 2 3
+	     02 4 4
+	     03 4 2
+	     04 2 1
+	     05 2 3
+	     06 3 9
+	     ;
+	     run;
+
+
+/* Calculating Age */
+age = floor ((intck('month',birthdate,somedate) - (day(somedate) < day(birthdate))) / 12); 
+
+
+/* Tranwrd */
+data data;
+      set data;
+      var_new= tranwrd(var_old,'0D'x,"");
+	run;
+
+
+
+/* Percentiles and Univariate */
+
+proc univariate noprint pctldef=3 data = data.ynhh_hsr_inpat_comm;
+	by hsr msdrg;
+	var SumPaymentsAmt LOS;
+   	output out= outliers_hosp_drg pctlpts  = 1 99
+       	pctlpre  = hosp_drg_paidamt_ hosp_drg_los_
+        pctlname = pct1 pct99;
+	run;
+
+
+/* Proc datatsets */
+
+proc datasets library = libname;
+	delete file_name;
+	run;
